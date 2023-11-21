@@ -1,22 +1,13 @@
-#if !defined(UTIL_H)
+#ifndef UTIL_H
 #define UTIL_H
 
+#include <stdint.h>
 #include <stdlib.h>
-#include <sys/time.h>
-#include <time.h>
 
-/**
- * Get the time in milliseconds since UNIX epoch
- */
-size_t time_ms() {
-  struct timeval tv;
-  if(gettimeofday(&tv, NULL) == -1) {
-    perror("gettimeofday");
-    exit(2);
-  }
-  
-  // Convert timeval values to milliseconds
-  return tv.tv_sec*1000 + tv.tv_usec/1000;
-}
+// Sleep for a given number of milliseconds
+void sleep_ms(size_t ms);
+
+// Get the time in milliseconds since UNIX epoch
+size_t time_ms();
 
 #endif

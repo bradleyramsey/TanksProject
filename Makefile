@@ -1,6 +1,7 @@
 CC := clang
-CFLAGS := -g -Wall -Wno-deprecated-declarations -Werror
-
+NCC := nvcc
+CFLAGS := -g -Wall -Wno-deprecated-declarations -Werror 
+NCFLAGS := -g -I/home/curtsinger/.local/include -L/home/curtsinger/.local/li
 all: tank
 
 clean:
@@ -8,11 +9,7 @@ clean:
 
 tank: tank.c util.c util.h scheduler.c scheduler.h
 	$(CC) $(CFLAGS) -o tank tank.c util.c scheduler.c -lncurses
-
-zip:
-	@echo "Generating worm.zip file to submit to Gradescope..."
-	@zip -q -r worm.zip . -x .git/\* .vscode/\* .clang-format .gitignore worm
-	@echo "Done. Please upload worm.zip to Gradescope."
+	$(NCC) $(NCFLAGS) -o cracker cracker-gpu.cu -lcrypto -lm
 
 format:
 	@echo "Reformatting source code."
