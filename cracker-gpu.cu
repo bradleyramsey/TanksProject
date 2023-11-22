@@ -1,4 +1,6 @@
 // #define _GNU_SOURCE
+#include "cracker-gpu.h"
+
 #include <openssl/md5.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -22,10 +24,6 @@
 #define THREADS_PER_BLOCK (ALPHABET_SIZE * ALPHABET_SIZE)
 #define PASSWORDS_PER_THREAD (ALPHABET_SIZE * ALPHABET_SIZE)
 #define PASSWORDS_PER_BLOCK (PASSWORDS_PER_THREAD * THREADS_PER_BLOCK)
-
-
-#define MAX_USERNAME_LENGTH 64
-#define PASSWORD_LENGTH 7
 
 #define SEARCH_SPACE_SIZE (pow(26, PASSWORD_LENGTH))
 
@@ -287,53 +285,11 @@ void usrnmcpy(char * from, char * to){
 
 /********************* Parts B & C ************************/
 
-/**
- * This struct is the root of the data structure that will hold users and hashed passwords.
- * There are a number of buckets, each with a linked list.
- * Instead of trying to be fancy, we just used a mask and a bitwise AND to get a psuedo-random assignment that's also super fast
- */
-typedef struct password_set {
-  // Our buckets
-  struct password_set_node* buckets[numBucketsAndMask + 1];
 
-  // Keeping track of the # of passwords in this set.
-  int numPasswords;
-} password_set_t;
 
 __constant__ int numPasswordsGPU;
 int numPasswords;
 
-// Each node in each bucket keeps the username, hash, and references to make deletion faster
-typedef struct password_set_node {
-  char username[MAX_USERNAME_LENGTH];
-  uint8_t hashed_password [MD5_DIGEST_LENGTH];
-  char solved_password[PASSWORD_LENGTH];
-} password_set_node_t;
-
-// A special arg stuct to pass what we need to each thread
-typedef struct { password_set_t* passwords; int offset; } args_t;
-
-// 4 threads, as per the assigment
-int numThreads = 4;
-
-// We only need one lock, just to make sure the counter is accurate
-pthread_mutex_t counter_lock = PTHREAD_MUTEX_INITIALIZER;
-int cracked_passwords = 0;
-
-/**
- * Initialize a password set.
- * Complete this implementation for part B of the lab.
- *
- * \param passwords  A pointer to allocated memory that will hold a password set
- */
-void init_password_set(password_set_node_t* passwords) {
-  // We'll set each bucket to NULL, just in case
-  // for(int i = 0; i <= numBucketsAndMask; i++){
-  //   passwords->buckets[i] = NULL;
-  // }
-  // passwords->numPasswords = 0;
-  // passwords = NULL;
-}
 
 
 void add_password_array(password_set_node_t** passwords, char* username, uint8_t* password_hash) {
@@ -410,7 +366,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
   //   // cuPrintf("test!!!");
   // }
 
-  // Now check if the hash of the candidate password matches any of the hashs in the bucket
+      // Now check if the hash of the candidate password matches any of the hashs in the bucket
       for(int i = 0; i < numPasswordsGPU; i++){
         // if(memcmp(candidate_hash, &(passwords[i].hashed_password), MD5_DIGEST_LENGTH) == 0) {
         if(hashcmp(candidate_hash, passwords[i].hashed_password)){
@@ -551,59 +507,59 @@ void print_usage(const char* exec_name) {
   fprintf(stderr, "  %s list <password file name>\n", exec_name);
 }
 
-int main(int argc, char** argv) {
-  if(argc != 3) {
-    print_usage(argv[0]);
-    exit(1);
-  }
+// int main(int argc, char** argv) {
+//   if(argc != 3) {
+//     print_usage(argv[0]);
+//     exit(1);
+//   }
 
-  if(strcmp(argv[1], "list") == 0) {
-    // Make and initialize a password set
-    password_set_node_t* passwords = NULL;
-    // init_password_set(&passwords);
+//   if(strcmp(argv[1], "list") == 0) {
+//     // Make and initialize a password set
+//     password_set_node_t* passwords = NULL;
+//     // init_password_set(&passwords);
 
-    // Open the password file
-    FILE* password_file = fopen(argv[2], "r");
-    if(password_file == NULL) {
-      perror("opening password file");
-      exit(2);
-    }
+//     // Open the password file
+//     FILE* password_file = fopen(argv[2], "r");
+//     if(password_file == NULL) {
+//       perror("opening password file");
+//       exit(2);
+//     }
 
-    // Read until we hit the end of the file
-    while(!feof(password_file)) {
-      // Make space to hold the username
-      char username[MAX_USERNAME_LENGTH];
+//     // Read until we hit the end of the file
+//     while(!feof(password_file)) {
+//       // Make space to hold the username
+//       char username[MAX_USERNAME_LENGTH];
 
-      // Make space to hold the MD5 string
-      char md5_string[MD5_DIGEST_LENGTH * 2 + 1];
+//       // Make space to hold the MD5 string
+//       char md5_string[MD5_DIGEST_LENGTH * 2 + 1];
 
-      // Make space to hold the MD5 bytes
-      uint8_t password_hash[MD5_DIGEST_LENGTH];
+//       // Make space to hold the MD5 bytes
+//       uint8_t password_hash[MD5_DIGEST_LENGTH];
 
-      // Try to read. The space in the format string is required to eat the newline
-      if(fscanf(password_file, "%s %s ", username, md5_string) != 2) {
-        fprintf(stderr, "Error reading password file: malformed line\n");
-        exit(2);
-      }
+//       // Try to read. The space in the format string is required to eat the newline
+//       if(fscanf(password_file, "%s %s ", username, md5_string) != 2) {
+//         fprintf(stderr, "Error reading password file: malformed line\n");
+//         exit(2);
+//       }
 
-      // Convert the MD5 string to MD5 bytes in our new node
-      if(md5_string_to_bytes(md5_string, password_hash) != 0) {
-        fprintf(stderr, "Error reading MD5\n");
-        exit(2);
-      }
+//       // Convert the MD5 string to MD5 bytes in our new node
+//       if(md5_string_to_bytes(md5_string, password_hash) != 0) {
+//         fprintf(stderr, "Error reading MD5\n");
+//         exit(2);
+//       }
 
-      // Add the password to the password set
-      // add_password(&passwords, username, password_hash);
-      add_password_array(&passwords, username, password_hash);
-    }
+//       // Add the password to the password set
+//       // add_password(&passwords, username, password_hash);
+//       add_password_array(&passwords, username, password_hash);
+//     }
 
-    // Now run the password list cracker
-    crack_password_list(passwords);
+//     // Now run the password list cracker
+//     crack_password_list(passwords);
 
-  } else {
-    print_usage(argv[0]);
-    exit(1);
-  }
+//   } else {
+//     print_usage(argv[0]);
+//     exit(1);
+//   }
 
-  return 0;
-}
+//   return 0;
+// }

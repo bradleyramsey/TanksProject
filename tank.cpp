@@ -371,71 +371,71 @@ void generate_apple() {
 }
 
 // Entry point: Set up the game, create jobs, then run the scheduler
-int main(void) {
-  // Initialize the ncurses window
-  WINDOW* mainwin = initscr();
-  if (mainwin == NULL) {
-    fprintf(stderr, "Error initializing ncurses.\n");
-    exit(2);
-  }
+// int main(void) {
+//   // Initialize the ncurses window
+//   WINDOW* mainwin = initscr();
+//   if (mainwin == NULL) {
+//     fprintf(stderr, "Error initializing ncurses.\n");
+//     exit(2);
+//   }
 
-  // Seed random number generator with the time in milliseconds
-  srand(time_ms());
+//   // Seed random number generator with the time in milliseconds
+//   srand(time_ms());
 
-  noecho();                // Don't print keys when pressed
-  keypad(mainwin, true);   // Support arrow keys
-  nodelay(mainwin, true);  // Non-blocking keyboard access
+//   noecho();                // Don't print keys when pressed
+//   keypad(mainwin, true);   // Support arrow keys
+//   nodelay(mainwin, true);  // Non-blocking keyboard access
 
-  // Initialize the game display
-  init_display();
+//   // Initialize the game display
+//   init_display();
 
-  // Zero out the board contents
-  memset(board, 0, BOARD_WIDTH * BOARD_HEIGHT * sizeof(int));
+//   // Zero out the board contents
+//   memset(board, 0, BOARD_WIDTH * BOARD_HEIGHT * sizeof(int));
 
-  // Put the worm at the middle of the board
-  board[BOARD_HEIGHT / 2][BOARD_WIDTH / 2] = 1;
+//   // Put the worm at the middle of the board
+//   board[BOARD_HEIGHT / 2][BOARD_WIDTH / 2] = 1;
 
-  // MY CHANGES ----------------------
-  // board[BOARD_HEIGHT / 2][(BOARD_WIDTH / 2)+1] = 1;
-  // board[BOARD_HEIGHT / 2][(BOARD_WIDTH / 2)-1] = 1;
-  // board[(BOARD_HEIGHT / 2)+1][(BOARD_WIDTH / 2)] = 1;
-  // board[(BOARD_HEIGHT / 2)-1][(BOARD_WIDTH / 2)] = 1;
-  // MY CHANGES ----------------------
+//   // MY CHANGES ----------------------
+//   // board[BOARD_HEIGHT / 2][(BOARD_WIDTH / 2)+1] = 1;
+//   // board[BOARD_HEIGHT / 2][(BOARD_WIDTH / 2)-1] = 1;
+//   // board[(BOARD_HEIGHT / 2)+1][(BOARD_WIDTH / 2)] = 1;
+//   // board[(BOARD_HEIGHT / 2)-1][(BOARD_WIDTH / 2)] = 1;
+//   // MY CHANGES ----------------------
 
 
-  // Task handles for each of the game tasks
-  task_t update_worm_task;
-  task_t draw_board_task;
-  task_t read_input_task;
-  task_t update_apples_task;
-  task_t generate_apple_task;
+//   // Task handles for each of the game tasks
+//   task_t update_worm_task;
+//   task_t draw_board_task;
+//   task_t read_input_task;
+//   task_t update_apples_task;
+//   task_t generate_apple_task;
 
-  // Initialize the scheduler library
-  scheduler_init();
+//   // Initialize the scheduler library
+//   scheduler_init();
 
-  // Create tasks for each task in the game
-  task_create(&update_worm_task, update_worm);
-  task_create(&draw_board_task, draw_board);
-  task_create(&read_input_task, read_input);
-  task_create(&update_apples_task, update_apples);
-  task_create(&generate_apple_task, generate_apple);
+//   // Create tasks for each task in the game
+//   task_create(&update_worm_task, update_worm);
+//   task_create(&draw_board_task, draw_board);
+//   task_create(&read_input_task, read_input);
+//   task_create(&update_apples_task, update_apples);
+//   task_create(&generate_apple_task, generate_apple);
 
-  // Wait for these tasks to exit
-  task_wait(update_worm_task);
-  task_wait(draw_board_task);
-  task_wait(read_input_task);
-  task_wait(update_apples_task);
+//   // Wait for these tasks to exit
+//   task_wait(update_worm_task);
+//   task_wait(draw_board_task);
+//   task_wait(read_input_task);
+//   task_wait(update_apples_task);
 
-  // Don't wait for the generate_apple task because it sleeps for 2 seconds,
-  // which creates a noticeable delay when exiting.
-  // task_wait(generate_apple_task);
+//   // Don't wait for the generate_apple task because it sleeps for 2 seconds,
+//   // which creates a noticeable delay when exiting.
+//   // task_wait(generate_apple_task);
 
-  // Display the end of game message and wait for user input
-  end_game();
+//   // Display the end of game message and wait for user input
+//   end_game();
 
-  // Clean up window
-  delwin(mainwin);
-  endwin();
+//   // Clean up window
+//   delwin(mainwin);
+//   endwin();
 
-  return 0;
-}
+//   return 0;
+// }
