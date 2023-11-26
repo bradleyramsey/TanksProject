@@ -112,7 +112,53 @@ void end_game() {
   timeout(-1);
   task_readchar();
 }
+/**
+ * Move the tank up one space on the board
+ */
+ void tank_right(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col){
+  if (tank_center_col+2 < BOARD_WIDTH){
+    board[tank_center_row][tank_center_col+2] = 1;
+    board[tank_center_row-1][tank_center_col+2] = 1;
+    board[tank_center_row+1][tank_center_col+2] = 1;
+    board[tank_center_row][tank_center_col-1] = 0;
+    board[tank_center_row-1][tank_center_col-1] = 0;
+    board[tank_center_row+1][tank_center_col-1] = 0;
+  }
+ }
 
+void tank_left(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col){
+  if (tank_center_col-2 > 0){
+    board[tank_center_row][tank_center_col-2] = 1;
+    board[tank_center_row-1][tank_center_col-2] = 1;
+    board[tank_center_row+1][tank_center_col-2] = 1;
+    board[tank_center_row][tank_center_col+1] = 0;
+    board[tank_center_row-1][tank_center_col+1] = 0;
+    board[tank_center_row+1][tank_center_col+1] = 0;
+  }
+}
+
+void tank_up(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col){
+  if (tank_center_row-2 >= 0){
+    board[tank_center_row-2][tank_center_col] = 1;
+    board[tank_center_row-2][tank_center_col-1] = 1;
+    board[tank_center_row-2][tank_center_col+1] = 1;
+    board[tank_center_row+1][tank_center_col] = 0;
+    board[tank_center_row+1][tank_center_col-1] = 0;
+    board[tank_center_row+1][tank_center_col+1] = 0;
+  }
+}
+
+
+void tank_down(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col){
+  if (tank_center_row+2 < BOARD_HEIGHT){
+    board[tank_center_row+2][tank_center_col] = 1;
+    board[tank_center_row+2][tank_center_col-1] = 1;
+    board[tank_center_row+2][tank_center_col+1] = 1;
+    board[tank_center_row-1][tank_center_col] = 0;
+    board[tank_center_row-1][tank_center_col-1] = 0;
+    board[tank_center_row-1][tank_center_col+1] = 0;
+  }
+}
 /**
  * Run in a task to draw the current state of the game board.
  */
@@ -223,8 +269,8 @@ void read_input() {
       fprintf(stderr, "ERROR READING INPUT\n");
     }
     int count = 0;
-    int worm_row = 0;
-    int worm_col = 0;
+    int tank_center_row = 0;
+    int tank_center_col = 0;
     // Loop over cells of the game board
     for (int r = 0; r < BOARD_HEIGHT; r++) {
       for (int c = 0; c < BOARD_WIDTH; c++) {
@@ -232,8 +278,8 @@ void read_input() {
           count++;
         }
         if (count == 5){
-          worm_row = r;
-          worm_col = c;
+          tank_center_row = r;
+          tank_center_col = c;
         }
       }
     }
@@ -241,47 +287,19 @@ void read_input() {
     if (key == KEY_UP) {
       updated_worm_dir = DIR_NORTH;
       worm_dir = updated_worm_dir;
-      if (worm_row-2 >= 0){
-      board[worm_row-2][worm_col] = 1;
-      board[worm_row-2][worm_col-1] = 1;
-      board[worm_row-2][worm_col+1] = 1;
-      board[worm_row+1][worm_col] = 0;
-      board[worm_row+1][worm_col-1] = 0;
-      board[worm_row+1][worm_col+1] = 0;
-      }
+      tank_up(board,tank_center_row, tank_center_col);
     } else if (key == KEY_RIGHT) {
       updated_worm_dir = DIR_EAST;
       worm_dir = updated_worm_dir;
-      if (worm_col+2 < BOARD_WIDTH){
-      board[worm_row][worm_col+2] = 1;
-      board[worm_row-1][worm_col+2] = 1;
-      board[worm_row+1][worm_col+2] = 1;
-      board[worm_row][worm_col-1] = 0;
-      board[worm_row-1][worm_col-1] = 0;
-      board[worm_row+1][worm_col-1] = 0;
-      }
+      tank_right(board, tank_center_row, tank_center_col);
     } else if (key == KEY_DOWN) {
       updated_worm_dir = DIR_SOUTH;
       worm_dir = updated_worm_dir;
-      if (worm_row+2 < BOARD_HEIGHT){
-      board[worm_row+2][worm_col] = 1;
-      board[worm_row+2][worm_col-1] = 1;
-      board[worm_row+2][worm_col+1] = 1;
-      board[worm_row-1][worm_col] = 0;
-      board[worm_row-1][worm_col-1] = 0;
-      board[worm_row-1][worm_col+1] = 0;
-      }
+      tank_down(board, tank_center_row, tank_center_col);
     } else if (key == KEY_LEFT) {
       updated_worm_dir = DIR_WEST;
       worm_dir = updated_worm_dir;
-      if (worm_col-2 > 0){
-      board[worm_row][worm_col-2] = 1;
-      board[worm_row-1][worm_col-2] = 1;
-      board[worm_row+1][worm_col-2] = 1;
-      board[worm_row][worm_col+1] = 0;
-      board[worm_row-1][worm_col+1] = 0;
-      board[worm_row+1][worm_col+1] = 0;
-      }
+      tank_left(board, tank_center_row, tank_center_col);
     } else if (key == 'q') {
       running = false;
     }
@@ -450,7 +468,7 @@ void generate_apple() {
 }
 
 // Entry point: Set up the game, create jobs, then run the scheduler
-void * tankMain(void* none) {
+int main(void) {
   // Initialize the ncurses window
   WINDOW* mainwin = initscr();
   if (mainwin == NULL) {
@@ -471,7 +489,7 @@ void * tankMain(void* none) {
   // Zero out the board contents
   memset(board, 0, BOARD_WIDTH * BOARD_HEIGHT * sizeof(int));
 
-  // Put the worm at the middle of the board
+  // Put the tank at the middle of the board
   board[BOARD_HEIGHT / 2][BOARD_WIDTH / 2] = 1;
   board[BOARD_HEIGHT / 2][(BOARD_WIDTH / 2)+1] = 1;
   board[BOARD_HEIGHT / 2][(BOARD_WIDTH / 2)-1] = 1;
@@ -481,12 +499,6 @@ void * tankMain(void* none) {
   board[(BOARD_HEIGHT / 2) - 1][BOARD_WIDTH / 2] = 1;
   board[(BOARD_HEIGHT / 2) - 1][(BOARD_WIDTH / 2)+1] = 1;
   board[(BOARD_HEIGHT / 2) - 1][(BOARD_WIDTH / 2)-1] = 1;
-  // MY CHANGES ----------------------
-  // board[BOARD_HEIGHT / 2][(BOARD_WIDTH / 2)+1] = 1;
-  // board[BOARD_HEIGHT / 2][(BOARD_WIDTH / 2)-1] = 1;
-  // board[(BOARD_HEIGHT / 2)+1][(BOARD_WIDTH / 2)] = 1;
-  // board[(BOARD_HEIGHT / 2)-1][(BOARD_WIDTH / 2)] = 1;
-  // MY CHANGES ----------------------
 
 
   // Task handles for each of the game tasks
@@ -523,5 +535,5 @@ void * tankMain(void* none) {
   delwin(mainwin);
   endwin();
 
-  return NULL;
+  return 0;
 }
