@@ -398,7 +398,7 @@ void generate_apple() {
 }
 
 // Entry point: Set up the game, create jobs, then run the scheduler
-int main(void) {
+int tankMain(void* none) {
   // Initialize the ncurses window
   WINDOW* mainwin = initscr();
   if (mainwin == NULL) {

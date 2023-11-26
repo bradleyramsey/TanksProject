@@ -4,7 +4,7 @@ CFLAGS := -g -Wall -Wno-deprecated-declarations -Werror -L/home/goodellb/csc213/
 NCFLAGS := -g -I/home/curtsinger/.local/include -L/home/curtsinger/.local/li 
 
 all: main.cpp tank.cpp cracker-gpu.cu cracker-gpu.h util.cpp util.h scheduler.cpp scheduler.h
-	$(NCC) $(NCFLAGS) -o main main.cpp tank.cpp util.cpp scheduler.cpp  cracker-gpu.cu -lncurses 
+	$(NCC) $(NCFLAGS) -o main main.cpp tank.cpp util.cpp scheduler.cpp message.cpp cracker-gpu.cu -lncurses -lpthread
 
 clean:
 	rm -f tank
