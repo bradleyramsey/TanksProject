@@ -4,4 +4,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+void * tankMain(void* none);
+
 #endif

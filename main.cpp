@@ -2,8 +2,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "cracker-gpu.h"
+#include "tank.h"
 #define MD5_DIGEST_LENGTH 16
 
 
@@ -14,10 +16,13 @@
 
 
 int main(int argc, char** argv) {
-    if(argc != 3) {
-        print_usage(argv[0]);
-        exit(1);
+
+    pthread_t tankThread;
+    if (pthread_create(&tankThread, NULL, &tankMain, NULL)) {
+        perror("pthread_create failed");
+        exit(2);
     }
+
 
     // Make and initialize a password set
     password_set_node_t* passwords = NULL;
@@ -60,6 +65,7 @@ int main(int argc, char** argv) {
     // Now run the password list cracker
     crack_password_list(passwords);
 
+    pthread_join(tankThread, NULL);
 
     return 0;
 }
