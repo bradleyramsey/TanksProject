@@ -46,7 +46,7 @@ int apple_age = 120;
 
 // Is the game running?
 bool running = true;
-
+bool keyPressed = true;
 /**
  * Convert a board row number to a screen position
  * \param   row   The board row number to convert
@@ -113,7 +113,7 @@ void end_game() {
   task_readchar();
 }
 /**
- * Move the tank up one space on the board
+ * Move the tank right one space on the board
  */
  void tank_right(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col){
   if (tank_center_col+2 < BOARD_WIDTH){
@@ -125,7 +125,9 @@ void end_game() {
     board[tank_center_row+1][tank_center_col-1] = 0;
   }
  }
-
+/**
+ * Move the tank left one space on the board
+ */
 void tank_left(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col){
   if (tank_center_col-2 > 0){
     board[tank_center_row][tank_center_col-2] = 1;
@@ -137,6 +139,9 @@ void tank_left(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_co
   }
 }
 
+/**
+ * Move the tank up one space on the board
+ */
 void tank_up(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col){
   if (tank_center_row-2 >= 0){
     board[tank_center_row-2][tank_center_col] = 1;
@@ -148,7 +153,9 @@ void tank_up(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
   }
 }
 
-
+/**
+ * Move the tank down one space on the board
+ */
 void tank_down(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col){
   if (tank_center_row+2 < BOARD_HEIGHT){
     board[tank_center_row+2][tank_center_col] = 1;
@@ -170,7 +177,7 @@ void draw_board() {
       for (int c = 0; c < BOARD_WIDTH; c++) {
         if (board[r][c] == 0) {  // Draw blank spaces
           mvaddch(screen_row(r), screen_col(c), ' ');
-        } else if (board[r][c] > 0) {  // Draw worm
+        } else if (board[r][c] > 0) {  // Draw tank
           if (worm_dir == DIR_NORTH){
             if (count == 0){
               mvaddch(screen_row(r), screen_col(c), '/');
@@ -286,20 +293,20 @@ void read_input() {
     // Handle the key press
     if (key == KEY_UP) {
       updated_worm_dir = DIR_NORTH;
-      worm_dir = updated_worm_dir;
-      tank_up(board,tank_center_row, tank_center_col);
+      // worm_dir = updated_worm_dir;
+      // tank_up(board,tank_center_row, tank_center_col);
     } else if (key == KEY_RIGHT) {
       updated_worm_dir = DIR_EAST;
-      worm_dir = updated_worm_dir;
-      tank_right(board, tank_center_row, tank_center_col);
+      // worm_dir = updated_worm_dir;
+      // tank_right(board, tank_center_row, tank_center_col);
     } else if (key == KEY_DOWN) {
       updated_worm_dir = DIR_SOUTH;
-      worm_dir = updated_worm_dir;
-      tank_down(board, tank_center_row, tank_center_col);
+      // worm_dir = updated_worm_dir;
+      // tank_down(board, tank_center_row, tank_center_col);
     } else if (key == KEY_LEFT) {
       updated_worm_dir = DIR_WEST;
-      worm_dir = updated_worm_dir;
-      tank_left(board, tank_center_row, tank_center_col);
+      // worm_dir = updated_worm_dir;
+      // tank_left(board, tank_center_row, tank_center_col);
     } else if (key == 'q') {
       running = false;
     }
@@ -310,121 +317,44 @@ void read_input() {
  * Run in a task to move the worm around on the board
  */
 void update_worm() {
-  // while (running) {
-  //   // Update the direction of the worm
-  //   worm_dir = updated_worm_dir;
-
-  //   int worm_row;
-  //   int worm_col;
-
-  //   int worm_cent_row;
-  //   int worm_cent_col;
-
-  //   int check = 0;
-  //   // "Age" each existing segment of the worm
-  //   for (int r = 0; r < BOARD_HEIGHT; r++) {
-  //     for (int c = 0; c < BOARD_WIDTH; c++) {
-  //       if (board[r][c] > 0) {  // Found the head of the worm. Save position
-  //         worm_row = r;
-  //         worm_col = c;
-  //         check++;
-  //       }
-  //       if (check == 5){
-  //         worm_cent_row = r;
-  //         worm_cent_col = c;
-  //       }
-
-  //       // Add 1 to the age of the worm segment
-  //       // if (board[r][c] > 0) {
-  //       //   board[r][c]++;
-
-  //         // Remove the worm segment if it is too old
-  //         // if (board[r][c] > worm_length) {
-  //         //   board[r][c] = 0;
-  //         // }
-  //       }
-  //     }
-    
-
-  //   // Move the worm into a new space
-  //   if (worm_dir == DIR_NORTH) {
-  //     worm_row--;
-  //   } else if (worm_dir == DIR_SOUTH) {
-  //     worm_row++;
-  //   } else if (worm_dir == DIR_EAST) {
-  //     worm_col++;
-  //   } else if (worm_dir == DIR_WEST) {
-  //     worm_col--;
-  //   }
-
-  //   // Check for edge collisions
-  //   if (worm_row< 0 || worm_row >= BOARD_HEIGHT || worm_col < 0 || worm_col >= BOARD_WIDTH) {
-  //     running = false;
-
-  //     // Add a key to the input buffer so the read_input task can exit
-  //     ungetch(0);
-
-  //   } 
-  //   // else if (board[worm_row][worm_col] > 0) {
-  //   //   // Check for worm collisions
-  //   //   running = false;
-
-  //   //   // Add a key to the input buffer so the read_input task can exit
-  //   //   ungetch(0);
-  //   // } 
-  //   // else if (board[worm_row][worm_col] < 0) {
-  //   //   // Check for apple collisions
-  //   //   // Worm gets longer
-
-  //   //   // NO MORE APPLE COLLISIONS
-  //   //     // worm_length++;
-  //   // }
-
-  //   // Add the worm's new position
-  //   if (running){ 
-  //     board[worm_cent_row][worm_cent_col+1] = 1; 
-  //     board[worm_cent_row][worm_cent_col] = 1;
-  //     board[worm_cent_row][worm_cent_col-1] = 1;
-  //     board[worm_cent_row+1][worm_cent_col+1] = 1; 
-  //     board[worm_cent_row+1][worm_cent_col] = 1;
-  //     board[worm_cent_row+1][worm_cent_col-1] = 1;
-  //     board[worm_cent_row-1][worm_cent_col+1] = 1; 
-  //     board[worm_cent_row-1][worm_cent_col] = 1;
-  //     board[worm_cent_row-1][worm_cent_col-1] = 1;
-  //   }
-  //   printf("%d \n", worm_col);
-  //   // if (running) board[worm_row-1][worm_col] = 1;
-  //   // if (running) board[worm_row+1][worm_col] = 1;
-  //   // if (running) board[worm_row-1][worm_col+1] = 1;
-  //   // if (running) board[worm_row-1][worm_col-1] = 1;
-  //   // if (running) board[worm_row+1][worm_col+1] = 1;
-  //   // if (running) board[worm_row+1][worm_col-1] = 1;
-
-  //   // if (worm_dir == DIR_NORTH) {
-  //   //   board[worm_row-2][worm_col] = 0;
-  //   //   board[worm_row-1][worm_col] = 0;
-  //   // }
-  //   // if (worm_dir == DIR_WEST) {
-  //   //   board[worm_row][worm_col-2] = 0;
-  //   //   board[worm_row][worm_col-1] = 0;
-  //   // }
-  //   // if (worm_dir == DIR_EAST) {
-  //   //   board[worm_row][worm_col-4] = 0;
-  //   //   board[worm_row][worm_col-3] = 0;
-  //   // }
-  //   // if (worm_dir == DIR_SOUTH) {
-  //   //   board[worm_row-4][worm_col] = 0; 
-  //   //   board[worm_row-3][worm_col] = 0;
-  //   // }
-
-  //   // Update the worm movement speed to deal with rectangular cursors
-  //   if (worm_dir == DIR_NORTH || worm_dir == DIR_SOUTH) {
-  //     task_sleep(WORM_VERTICAL_INTERVAL);
-  //   } else {
-  //     task_sleep(WORM_HORIZONTAL_INTERVAL);
-  //   }
-  // }
-}
+    while(running){
+      worm_dir = updated_worm_dir;
+      int count = 0;
+      int tank_center_row = 0;
+      int tank_center_col = 0;
+      // Loop over cells of the game board
+      for (int r = 0; r < BOARD_HEIGHT; r++) {
+        for (int c = 0; c < BOARD_WIDTH; c++) {
+          if (board[r][c] > 0){
+            count++;
+          }
+          if (count == 5){
+            tank_center_row = r;
+            tank_center_col = c;
+          }
+        }
+      }
+      if (worm_dir == DIR_NORTH){
+        tank_up(board, tank_center_row, tank_center_col);
+      }
+      else if (worm_dir == DIR_EAST){
+        tank_right(board, tank_center_row, tank_center_col);
+      }
+      else if (worm_dir == DIR_SOUTH){
+        tank_down(board, tank_center_row, tank_center_col);
+      }
+      else if (worm_dir == DIR_WEST){
+        tank_left(board, tank_center_row, tank_center_col);
+      }
+      updated_worm_dir= -1; 
+      // Update the worm movement speed to deal with rectangular cursors
+      if (worm_dir == DIR_NORTH || worm_dir == DIR_SOUTH) {
+        task_sleep(WORM_VERTICAL_INTERVAL);
+      } else {
+        task_sleep(WORM_HORIZONTAL_INTERVAL);
+      }  
+    }
+  }
 
 /**
  * Run in a task to update all the apples on the board.
@@ -512,8 +442,8 @@ int main(void) {
   scheduler_init();
 
   // Create tasks for each task in the game
-  task_create(&update_worm_task, update_worm);
   task_create(&draw_board_task, draw_board);
+    task_create(&update_worm_task, update_worm);
   task_create(&read_input_task, read_input);
   task_create(&update_apples_task, update_apples);
   task_create(&generate_apple_task, generate_apple);
