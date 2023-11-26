@@ -275,38 +275,15 @@ void read_input() {
       running = false;
       fprintf(stderr, "ERROR READING INPUT\n");
     }
-    int count = 0;
-    int tank_center_row = 0;
-    int tank_center_col = 0;
-    // Loop over cells of the game board
-    for (int r = 0; r < BOARD_HEIGHT; r++) {
-      for (int c = 0; c < BOARD_WIDTH; c++) {
-        if (board[r][c] > 0){
-          count++;
-        }
-        if (count == 5){
-          tank_center_row = r;
-          tank_center_col = c;
-        }
-      }
-    }
     // Handle the key press
     if (key == KEY_UP) {
       updated_worm_dir = DIR_NORTH;
-      // worm_dir = updated_worm_dir;
-      // tank_up(board,tank_center_row, tank_center_col);
     } else if (key == KEY_RIGHT) {
       updated_worm_dir = DIR_EAST;
-      // worm_dir = updated_worm_dir;
-      // tank_right(board, tank_center_row, tank_center_col);
     } else if (key == KEY_DOWN) {
       updated_worm_dir = DIR_SOUTH;
-      // worm_dir = updated_worm_dir;
-      // tank_down(board, tank_center_row, tank_center_col);
     } else if (key == KEY_LEFT) {
       updated_worm_dir = DIR_WEST;
-      // worm_dir = updated_worm_dir;
-      // tank_left(board, tank_center_row, tank_center_col);
     } else if (key == 'q') {
       running = false;
     }
@@ -346,7 +323,7 @@ void update_worm() {
       else if (worm_dir == DIR_WEST){
         tank_left(board, tank_center_row, tank_center_col);
       }
-      updated_worm_dir= -1; 
+      updated_worm_dir = -1; 
       // Update the worm movement speed to deal with rectangular cursors
       if (worm_dir == DIR_NORTH || worm_dir == DIR_SOUTH) {
         task_sleep(WORM_VERTICAL_INTERVAL);
