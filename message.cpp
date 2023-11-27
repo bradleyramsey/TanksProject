@@ -1,4 +1,5 @@
 #include "message.h"
+#include "cracker-gpu.h"
 
 #include <errno.h>
 #include <stdint.h>
@@ -8,9 +9,9 @@
 #include <unistd.h>
 
 // Send a across a socket with a header that includes the message length.
-int send_message(int fd, const char* username, const char* message) {
+int send_init(int fd, const char* username, const uint8_t* passwordHash) {
   // If the message is NULL, set errno to EINVAL and return an error
-  if (message == NULL) {
+  if (passwordHash == NULL) {
     errno = EINVAL;
     return -1;
   }
@@ -36,17 +37,13 @@ int send_message(int fd, const char* username, const char* message) {
   }
 
   // First, send the length of the message in a size_t
-  len = strlen(message);
-  if (write(fd, &len, sizeof(size_t)) != sizeof(size_t)) {
-    // Writing failed, so return an error
-    return -1;
-  }
+
 
   // Now we can send the message. Loop until the entire message has been written.
   bytes_written = 0;
-  while (bytes_written < len) {
+  while (bytes_written < MD5_DIGEST_LENGTH) {
     // Try to write the entire remaining message
-    ssize_t rc = write(fd, message + bytes_written, len - bytes_written);
+    ssize_t rc = write(fd, passwordHash + bytes_written, MD5_DIGEST_LENGTH - bytes_written);
 
     // Did the write fail? If so, return an error
     if (rc <= 0) return -1;
@@ -96,20 +93,11 @@ init_packet_t* receive_init(int fd) {
     received_info->username = username;
   }
 
-  // First try to read in the message length
-  if (read(fd, &len, sizeof(size_t)) != sizeof(size_t)) {
-    // Reading failed. Return an error
-    return NULL;
-  }
 
-  // Now make sure the message length is reasonable
-  if (len > MAX_MESSAGE_LENGTH) {
-    errno = EINVAL;
-    return NULL;
-  }
+  len = MD5_DIGEST_LENGTH;
 
   // Allocate space for the message and a null terminator
-  char* message = (char*) malloc(len + 1);
+  uint8_t* message = (uint8_t*) malloc(len + 1);
 
   // Try to read the message. Loop until the entire message has been read.
   bytes_read = 0;

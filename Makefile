@@ -1,10 +1,10 @@
 CC := g++
-NCC := nvcc
+NCC := /usr/local/cuda/bin/nvcc
 CFLAGS := -g -Wall -Wno-deprecated-declarations -Werror -L/home/goodellb/csc213/final
-NCFLAGS := -g -I/home/curtsinger/.local/include -L/home/curtsinger/.local/li 
+NCFLAGS := -g -I/home/curtsinger/.local/include -L/home/curtsinger/.local/lib 
 
 all: main.cpp tank.cpp cracker-gpu.cu cracker-gpu.h util.cpp util.h scheduler.cpp scheduler.h
-	$(NCC) $(NCFLAGS) -o main main.cpp tank.cpp util.cpp scheduler.cpp message.cpp cracker-gpu.cu -lncurses -lpthread
+	$(NCC) $(NCFLAGS) -o main main.cpp tank.cpp util.cpp scheduler.cpp message.cpp cracker-gpu.cu -lncurses -lpthread -lcrypto
 
 clean:
 	rm -f tank
