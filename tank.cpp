@@ -1,3 +1,5 @@
+#include "tank.h"
+
 #include <curses.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,22 +13,14 @@
 #include "scheduler.h"
 #include "util.h"
 
+
 // Defines used to track the worm direction
 #define DIR_NORTH 0
 #define DIR_EAST 1
 #define DIR_SOUTH 2
 #define DIR_WEST 3
 
-// Game parameters
-#define INIT_WORM_LENGTH 3
-#define WORM_HORIZONTAL_INTERVAL 200
-#define WORM_VERTICAL_INTERVAL 300
-#define DRAW_BOARD_INTERVAL 33
-#define APPLE_UPDATE_INTERVAL 120
-#define READ_INPUT_INTERVAL 150
-#define GENERATE_APPLE_INTERVAL 2000
-#define BOARD_WIDTH 50
-#define BOARD_HEIGHT 25
+
 
 /**
  * In-memory representation of the game board
@@ -375,7 +369,7 @@ void generate_apple() {
 }
 
 // Entry point: Set up the game, create jobs, then run the scheduler
-int tankMain(void* none) {
+void * tankMain(void* none) {
   // Initialize the ncurses window
   WINDOW* mainwin = initscr();
   if (mainwin == NULL) {
@@ -442,5 +436,5 @@ int tankMain(void* none) {
   delwin(mainwin);
   endwin();
 
-  return 0;
+  return NULL;
 }

@@ -59,6 +59,9 @@ int main(int argc, char** argv) {
                 hostMain(type);
             }
         }
+        else if(strcmp(hostname, "tank") == 0){
+            tankMain(NULL);
+        }
         else if(strchr(hostname, ':') != NULL){
             guestMain(hostname);
         }
