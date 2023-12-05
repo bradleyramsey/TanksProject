@@ -2,6 +2,7 @@
     "files.associations": {
         "system_error": "cpp",
         "bitset": "cpp",
-        "atomic": "cpp"
+        "atomic": "cpp",
+        "chrono": "cpp"
     }
 }

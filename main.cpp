@@ -115,6 +115,8 @@ void guestMain(char* addr){
     char username[MAX_USERNAME_LENGTH];
     scanf("%s", username);
 
+    // TODO: Check for same username. Or need some unique indentifier in passwords. this is prob not where we'll solve the issue, but just putting a comment here so I don't forget
+
     bool valid = false;
     char password[MAX_USERNAME_LENGTH];
     
@@ -142,17 +144,17 @@ void guestMain(char* addr){
     start_packet_t* startInfo = receive_start(host_socket_fd);
     if(startInfo->playerNum == 1){
         // Start a listening socket for your opponent
-        unsigned short port = 0;
-        int server_socket_fd = server_socket_open(&port);
+        unsigned short our_port = 0;
+        int server_socket_fd = server_socket_open(&our_port);
         if (server_socket_fd == -1) {
             perror("Server socket was not opened");
             exit(EXIT_FAILURE);
         }
         
         // Send the info of your new socket back to the host so they can forward it to your opponent
-        char hostname[32];
-        gethostname(hostname, 32); //TODO: Check if need to truncate hostname (i.e. remove .cs.grinnell.edu)
-        send_start(host_socket_fd, 1, hostname, port);
+        char our_hostname[32];
+        gethostname(our_hostname, 32); //TODO: Check if need to truncate hostname (i.e. remove .cs.grinnell.edu)
+        send_start(host_socket_fd, 2, our_hostname, our_port);
 
         // Start listening for a connection
         if (listen(server_socket_fd, MAX_PLAYERS)) {
@@ -166,30 +168,30 @@ void guestMain(char* addr){
             perror("accept failed");
             exit(EXIT_FAILURE);
         }
-        printf("Ready to play! Starting game!\n");
+        // printf("Ready to play! Starting game!\n");
 
         // Once they connect, exchange greetings and then send the starting board
-        opponentsUsername = receive_greeting(opponent_socket_fd);
         send_greeting(opponent_socket_fd, username);
+        opponentsUsername = receive_greeting(opponent_socket_fd);
         printf("You're battling %s, Get ready!", opponentsUsername);
     }
     else{
         // Connect to the provided socket
-        int opponent_socket_fd = socket_connect(hostname, port);
+        int opponent_socket_fd = socket_connect(startInfo->hostname, startInfo->port);
         if (opponent_socket_fd == -1) {
             perror("Failed to connect");
             exit(EXIT_FAILURE);
         }
-        printf("You're connect to your opponent!");
+        // printf("You're connected to your opponent!\n");
 
         // Exchange greetings and start listening for the first board state
-        send_greeting(opponent_socket_fd, username);
         opponentsUsername = receive_greeting(opponent_socket_fd);
+        send_greeting(opponent_socket_fd, username);
 
-        printf("You're battling %s, Get ready!", opponentsUsername);
+        printf("You're battling %s, Get ready!\n", opponentsUsername);
         
     }
-
+    fflush(stdout);
 
     pthread_t tankThread;
     if (pthread_create(&tankThread, NULL, &tankMain, NULL)) {
@@ -398,9 +400,12 @@ void * listen_connect(void* tempArgs){
     return NULL;
 }
 
+start_packet_t* threadExchange[MAX_PLAYERS];
+
 void * listen_init(void* input_args){
     args_t* args = (args_t*) input_args;
     int client_socket_fd = args->client_socket;
+    int thread_index = args->index;
     char* recived_username;
     init_packet_t* info;
     uint8_t* recived_hash;
@@ -408,32 +413,78 @@ void * listen_init(void* input_args){
     // Read a message from the client
     info = receive_init(client_socket_fd);
     if (info == NULL){
-        printf("WARNING: Recieved irregular initalization message from client %d with index %d", client_socket_fd, args->index);
+        printf("WARNING: Recieved irregular initalization message from client %d with index %d", client_socket_fd, thread_index);
     }
     recived_hash = info->passwordHash; // store password from packet 
     recived_username = info->username; // store username from packet
 
     // We will assume that the password has been verified to meet the criteria on the sending end
     pthread_mutex_lock(&passwordSet_lock);
-    int index = (recived_hash[0] & numBucketsAndMask);
-    while(passwords[index].hashed_password[0] != 0){
-        (index++) % (numBucketsAndMask + 1);
+    int hash_index = (recived_hash[0] & numBucketsAndMask);
+    while(passwords[hash_index].hashed_password[0] != 0){
+        (hash_index++) % (numBucketsAndMask + 1);
     }
-    memcpy(&(passwords[index].hashed_password), recived_hash, MD5_DIGEST_LENGTH);
-    strcpy((passwords[index].username), recived_username);
+    memcpy(&(passwords[hash_index].hashed_password), recived_hash, MD5_DIGEST_LENGTH);
+    strcpy((passwords[hash_index].username), recived_username);
     pthread_mutex_unlock(&passwordSet_lock);
 
-    printf("\"%s\" (#%d) is signed in and ready to play!\n", recived_username, args->index + 1);
+    printf("\"%s\" (#%d) is signed in and ready to play!\n", recived_username, thread_index + 1);
+
+    threadExchange[thread_index] = NULL;
 
     while(GameState == 0){sleep(1);}
 
     printf("STARTING!");
     fflush(stdout);
-
-    // Send start to this threads player
-    send_start(client_socket_fd, 1, NULL, 0);
-
+    // TODO: deadlocks if someone leaves 
+    // TODO: We'll have an array that corresponds to each thread. They can update their values depending on wins and losses and then the next round will go off of that. I'm being lazy by not implementing it rn.
+    // Send start to this thread's player
+    if((thread_index % 2) == 0){
+        if(thread_index == numPlayers - 1){ // IDK if this will work - might not have the scope
+            printf("You're the odd player out, please wait for the next round");
+            
+        }
+        else{
+            send_start(client_socket_fd, 1, NULL, 0);
+            start_packet_t* info = receive_start(client_socket_fd);
+            threadExchange[thread_index + 1] = info; // Communicate between clients
+            // threadExchange[thread_index] = info; // I just have a feeling we'll need this later
+        }
+    }
+    else{
+        while(threadExchange[thread_index] == NULL){sleep(0.5);}
+        send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port);
+    }
     while(true){sleep(1);};
 
     return NULL;
 }
+
+
+/**
+ * Here's the flow for beginning the game:
+ * host                     Server                   Client 1                Client 2
+ * thread         main     connect     listen          main                    main
+ *           create connect
+ *                    listen for clients 
+ *                                                    connect
+ *                  create listen for client
+ *                                               prompt for username
+ *                                                   send init
+ *                                  recieve init    wait for start
+ *                                  wait for main              
+ *                                                                         same init process
+ * 
+ *             get 's' key
+ *          change game state
+ *                              send start if player 1
+ *                                                  receive start
+ *                                                   start server
+ *                                              send start w/ server info
+ *                                  receieve start
+ *                                  update global
+ *                            player 2 listen waits for global
+ *                                    send start
+ *                               wait for results of game                   connect to client 1 server
+ *                                                             send board and play game
+*/
