@@ -11,11 +11,7 @@
 
 #include "cracker-gpu.h"
 #include "tank.h"
-// #define MD5_DIGEST_LENGTH 16
 
-
-// #define MAX_USERNAME_LENGTH 32
-// #define PASSWORD_LENGTH 7
 #define numBucketsAndMask 64
 
 #define MAX_PLAYERS 32
@@ -31,6 +27,7 @@ typedef struct {
 void guestMain(char* addr);
 void hostMain(char * type);
 
+int GameState;
 
 
 /**
@@ -39,7 +36,10 @@ void hostMain(char * type);
 */
 int main(int argc, char** argv) {
     printf("Welcome to the Title-less Tank Game!! If you would like to join an existing game, "
-    "please type the '<hostname>:<port>' otherwise, type 'host' to start your own!\n> ");
+    "please type '<hostname>:<port>' otherwise, type 'host' to start your own!\n> ");
+
+
+    GameState = 0;
 
     bool done = false;
     while(!done){
@@ -101,11 +101,11 @@ void guestMain(char* addr){
     }
     
 
+    //TODO: HANDLE CONNECTION REFUSED
 
-
-    // connect to peer
-    int socket_fd = socket_connect(hostname, port);
-    if (socket_fd == -1) {
+    // connect to host
+    int host_socket_fd = socket_connect(hostname, port);
+    if (host_socket_fd == -1) {
       perror("Failed to connect");
       exit(EXIT_FAILURE);
     }
@@ -134,9 +134,61 @@ void guestMain(char* addr){
     uint8_t passwordHash[MD5_DIGEST_LENGTH];
     MD5((unsigned char*)password, strlen(password), passwordHash);
     // md5String(password, PASSWORD_LENGTH, passwordHash);
+    
+    send_init(host_socket_fd, username, passwordHash);
 
-    send_init(socket_fd, username, passwordHash);
+    // TODO: consider moving this all to tank.c 
+    char * opponentsUsername;
+    start_packet_t* startInfo = receive_start(host_socket_fd);
+    if(startInfo->playerNum == 1){
+        // Start a listening socket for your opponent
+        unsigned short port = 0;
+        int server_socket_fd = server_socket_open(&port);
+        if (server_socket_fd == -1) {
+            perror("Server socket was not opened");
+            exit(EXIT_FAILURE);
+        }
+        
+        // Send the info of your new socket back to the host so they can forward it to your opponent
+        char hostname[32];
+        gethostname(hostname, 32); //TODO: Check if need to truncate hostname (i.e. remove .cs.grinnell.edu)
+        send_start(host_socket_fd, 1, hostname, port);
 
+        // Start listening for a connection
+        if (listen(server_socket_fd, MAX_PLAYERS)) {
+            perror("listen failed");
+            exit(EXIT_FAILURE);
+        }
+
+        int opponent_socket_fd = server_socket_accept(server_socket_fd);
+        // check if client socket is not connected
+        if (opponent_socket_fd == -1) {
+            perror("accept failed");
+            exit(EXIT_FAILURE);
+        }
+        printf("Ready to play! Starting game!\n");
+
+        // Once they connect, exchange greetings and then send the starting board
+        opponentsUsername = receive_greeting(opponent_socket_fd);
+        send_greeting(opponent_socket_fd, username);
+        printf("You're battling %s, Get ready!", opponentsUsername);
+    }
+    else{
+        // Connect to the provided socket
+        int opponent_socket_fd = socket_connect(hostname, port);
+        if (opponent_socket_fd == -1) {
+            perror("Failed to connect");
+            exit(EXIT_FAILURE);
+        }
+        printf("You're connect to your opponent!");
+
+        // Exchange greetings and start listening for the first board state
+        send_greeting(opponent_socket_fd, username);
+        opponentsUsername = receive_greeting(opponent_socket_fd);
+
+        printf("You're battling %s, Get ready!", opponentsUsername);
+        
+    }
 
 
     pthread_t tankThread;
@@ -189,10 +241,38 @@ void guestMain(char* addr){
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /******************************| HOST STUFF BELOW |******************************/
 
+void* listen_connect(void* args);
 void* listen_init(void* args);
 
+typedef struct {
+    int server_socket_fd;
+}listen_connect_args_t;
 
 /**
  * This struct is the root of the data structure that will hold users and hashed passwords.
@@ -250,60 +330,73 @@ void hostMain(char * type){
     }
 
     printf("Game started! Listening for players on port %d\n", port);
-
-    // This is inefficient, since connecting and disconnecting causes loss of a spot
-    // but we're doing it for the sake of simplicity
-    pthread_t listen_threads [MAX_PLAYERS];
-    args_t args [MAX_PLAYERS];
-    numPlayers = 0;
-
+    
     if (listen(server_socket_fd, MAX_PLAYERS)) {
         perror("listen failed");
         exit(EXIT_FAILURE);
     }
 
-    char userInput = '\0';
-    while (userInput != 's' && numPlayers < MAX_PLAYERS){
-        // userInput = getchar(); // TODO: ACTUALLY GET OUT OF THE LOOP
+    listen_connect_args_t connect_args;
+    connect_args.server_socket_fd = server_socket_fd;
 
+    pthread_t listen_connect_thread;
+    if (pthread_create(&listen_connect_thread, NULL, &listen_connect, &connect_args)) {
+        perror("pthread_create failed");
+        exit(2);
+    } // if
+
+    char userInput = '\0';
+    while(userInput != 's'){
+        userInput = getchar();
+    }
+
+    /** TODO: Do the opponent assignments. Probably just have each thread check if it's odd or even. 
+     *  Have one initate the process and then pass it off, or just do the whole thing, idk.*/
+
+    GameState = 1;
+    
+    pthread_join(listen_connect_thread, NULL);
+}
+
+
+void * listen_connect(void* tempArgs){
+    listen_connect_args_t* args = (listen_connect_args_t*) tempArgs;
+    // This is inefficient, since connecting and disconnecting causes loss of a spot
+    // but we're doing it for the sake of simplicity
+    pthread_t listen_threads [MAX_PLAYERS];
+    args_t listen_args [MAX_PLAYERS];
+    numPlayers = 0;
+
+    while (numPlayers < MAX_PLAYERS){
+        // userInput = getchar(); // TODO: ACTUALLY GET OUT OF THE LOOP
+        // TODO: Add new thread for listening and keep this thread as waiting for user input
         fflush(stdout);
         // Wait for a client to connect
-        int client_socket_fd = server_socket_accept(server_socket_fd);
+        int client_socket_fd = server_socket_accept(args->server_socket_fd);
         // check if client socket is not connected
         if (client_socket_fd == -1) {
             perror("accept failed");
             exit(EXIT_FAILURE);
         }
-        printf("Player #%d connected!\n", numPlayers + 1);
+        if(GameState == 0){ // Don't let people connect while the game is being played. Idk what that would do.
+            printf("Player #%d connected!\n", numPlayers + 1);
 
-         // set index to first open index
-        args[numPlayers].client_socket = client_socket_fd;
-        args[numPlayers].index = numPlayers; // store client socket for thread
-         // store client socket for thread
-        // fds[numPlayers] = client_socket_fd; // store client socket
-        // create a thread
-        if (pthread_create(&listen_threads[numPlayers++], NULL, &listen_init, &(args[numPlayers]))) {
-            perror("pthread_create failed");
-            exit(2);
-        } // if
+            // set index to first open index
+            listen_args[numPlayers].client_socket = client_socket_fd;
+            listen_args[numPlayers].index = numPlayers; // store client socket for thread
+            // store client socket for thread
+            // fds[numPlayers] = client_socket_fd; // store client socket
+            // create a thread
+            if (pthread_create(&listen_threads[numPlayers++], NULL, &listen_init, &(listen_args[numPlayers]))) {
+                perror("pthread_create failed");
+                exit(2);
+            } // if
+        }
     } // while
 
 
-
-
-
-
-
-
-    // if(strcmp(type,"passwords") != 0){
-    //     continue;
-    // }
-
-    // if(strcmp(type,"plain") != 0){
-    //     continue;
-    // }
+    return NULL;
 }
-
 
 void * listen_init(void* input_args){
     args_t* args = (args_t*) input_args;
@@ -331,6 +424,16 @@ void * listen_init(void* input_args){
     pthread_mutex_unlock(&passwordSet_lock);
 
     printf("\"%s\" (#%d) is signed in and ready to play!\n", recived_username, args->index + 1);
+
+    while(GameState == 0){sleep(1);}
+
+    printf("STARTING!");
+    fflush(stdout);
+
+    // Send start to this threads player
+    send_start(client_socket_fd, 1, NULL, 0);
+
+    while(true){sleep(1);};
 
     return NULL;
 }
