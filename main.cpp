@@ -245,6 +245,8 @@ void guestMain(char* addr){
 
     pthread_join(tankThread, NULL);
 
+    // TODO: handle game over so can play again
+
     return;
 }
 
