@@ -377,7 +377,7 @@ int receive_and_update_screen(int fd, int board[][50]) {
 
     // Did the read fail? If so, return an error
     if (rc <= 0) {
-      return NULL;
+      return -1;
     }
 
     // Update the number of bytes read
