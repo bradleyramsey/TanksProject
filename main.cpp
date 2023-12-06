@@ -341,7 +341,7 @@ void hostMain(char * type){
         exit(EXIT_FAILURE);
     }
 
-    printf("Game started! Listening for players on port %d\n", port);
+    printf("Game started! Listening for players on port \033[0;35m%d\033[0m\n", port);
     
     if (listen(server_socket_fd, MAX_PLAYERS)) {
         perror("listen failed");
