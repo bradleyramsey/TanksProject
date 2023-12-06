@@ -1,3 +1,4 @@
+#include "tank.h"
 #include <curses.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -10,6 +11,7 @@
 
 #include "scheduler.h"
 #include "util.h"
+#include "message.h"
 
 // Defines used to track the worm direction
 #define DIR_NORTH 0
@@ -18,17 +20,13 @@
 #define DIR_WEST 3
 
 // Game parameters
-#define INIT_WORM_LENGTH 3
-#define WORM_HORIZONTAL_INTERVAL 200
-#define WORM_VERTICAL_INTERVAL 300
-#define DRAW_BOARD_INTERVAL 33
-#define APPLE_UPDATE_INTERVAL 120
-#define READ_INPUT_INTERVAL 150
-#define GENERATE_APPLE_INTERVAL 2000
-#define BOARD_WIDTH 50
-#define BOARD_HEIGHT 25
 #define PLAYER_1 1
 #define PLAYER_2 2
+
+
+
+// TODO: Handle loss on other size
+
 
 /**
  * In-memory representation of the game board
@@ -38,6 +36,7 @@
  */
 int board[BOARD_HEIGHT][BOARD_WIDTH];
 int player_num = 1;
+int partner_fd = -1;
 
 // Tank parameters for p1
 int tank_dir_p1 = DIR_NORTH;
@@ -494,10 +493,11 @@ void read_input()
  */
 void update_tank()
 {
+  int tank_dir = DIR_NORTH;
+  int weapon_dir = DIR_NORTH;
   while (running)
   {
-    int tank_dir = DIR_NORTH;
-    int weapon_dir = DIR_NORTH;
+    receive_and_update_screen(partner_fd, board);
     if (player_num == 1){
       tank_dir = updated_tank_dir_p1;
       tank_dir_p1 = updated_tank_dir_p1;
@@ -591,6 +591,7 @@ void update_tank()
         }
       }
     }
+    send_screen(partner_fd, 1, board);
     // Update the worm movement speed to deal with rectangular cursors
     if (tank_dir == DIR_NORTH || tank_dir == DIR_SOUTH)
     {
@@ -645,8 +646,13 @@ void update_tank()
 // }
 
 // Entry point: Set up the game, create jobs, then run the scheduler
-void * tankMain(void * none)
+void * tankMain(void * temp_args)
 {
+  if(temp_args != NULL){
+    tank_main_args_t* args = (tank_main_args_t*) temp_args;
+    player_num = args->player_num;
+    partner_fd = args->partner_fd;
+  }
   // Initialize the ncurses window
   WINDOW *mainwin = initscr();
   if (mainwin == NULL)
@@ -665,30 +671,38 @@ void * tankMain(void * none)
   // Initialize the game display
   init_display();
 
-  // Zero out the board contents
-  memset(board, 0, BOARD_WIDTH * BOARD_HEIGHT * sizeof(int));
+  if(player_num == 1 || temp_args == NULL){
+    // Zero out the board contents
+    memset(board, 0, BOARD_WIDTH * BOARD_HEIGHT * sizeof(int));
 
-  // Put tank for player 1 in the bottom right of the board
-  board[0][1] = 1;
-  board[0][2] = 1;
-  board[0][3] = 1;
-  board[1][1] = 1;
-  board[1][2] = 1;
-  board[1][3] = 1;
-  board[2][1] = 1;
-  board[2][2] = 1;
-  board[2][3] = 1;
+    // Put tank for player 1 in the bottom right of the board
+    board[0][1] = 1;
+    board[0][2] = 1;
+    board[0][3] = 1;
+    board[1][1] = 1;
+    board[1][2] = 1;
+    board[1][3] = 1;
+    board[2][1] = 1;
+    board[2][2] = 1;
+    board[2][3] = 1;
 
-  // Put tank for player 2 in the bottom right of the board
-  board[BOARD_HEIGHT - 1][BOARD_WIDTH - 3] = 2;
-  board[BOARD_HEIGHT - 1][BOARD_WIDTH - 2] = 2;
-  board[BOARD_HEIGHT - 1][BOARD_WIDTH - 1] = 2;
-  board[BOARD_HEIGHT - 2][BOARD_WIDTH - 3] = 2;
-  board[BOARD_HEIGHT - 2][BOARD_WIDTH - 2] = 2;
-  board[BOARD_HEIGHT - 2][BOARD_WIDTH - 1] = 2;
-  board[BOARD_HEIGHT - 3][BOARD_WIDTH - 3] = 2;
-  board[BOARD_HEIGHT - 3][BOARD_WIDTH - 2] = 2;
-  board[BOARD_HEIGHT - 3][BOARD_WIDTH - 1] = 2;
+    // Put tank for player 2 in the bottom right of the board
+    board[BOARD_HEIGHT - 1][BOARD_WIDTH - 3] = 2;
+    board[BOARD_HEIGHT - 1][BOARD_WIDTH - 2] = 2;
+    board[BOARD_HEIGHT - 1][BOARD_WIDTH - 1] = 2;
+    board[BOARD_HEIGHT - 2][BOARD_WIDTH - 3] = 2;
+    board[BOARD_HEIGHT - 2][BOARD_WIDTH - 2] = 2;
+    board[BOARD_HEIGHT - 2][BOARD_WIDTH - 1] = 2;
+    board[BOARD_HEIGHT - 3][BOARD_WIDTH - 3] = 2;
+    board[BOARD_HEIGHT - 3][BOARD_WIDTH - 2] = 2;
+    board[BOARD_HEIGHT - 3][BOARD_WIDTH - 1] = 2;
+
+    send_screen(partner_fd, 1, board);
+  }
+  else{
+    receive_and_update_screen(partner_fd, board);
+    send_screen(partner_fd, 1, board);
+  }
 
   // Task handles for each of the game tasks
   task_t update_tank_task;

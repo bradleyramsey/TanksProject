@@ -15,6 +15,12 @@
 #define BOARD_WIDTH 50
 #define BOARD_HEIGHT 25
 
+typedef struct{
+    int player_num;
+    int partner_fd;
+} tank_main_args_t;
+
 void * tankMain(void* none);
+
 
 #endif

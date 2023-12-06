@@ -141,6 +141,7 @@ void guestMain(char* addr){
 
     // TODO: consider moving this all to tank.c 
     char * opponentsUsername;
+    int opponent_socket_fd;
     start_packet_t* startInfo = receive_start(host_socket_fd);
     if(startInfo->playerNum == 1){
         // Start a listening socket for your opponent
@@ -162,7 +163,7 @@ void guestMain(char* addr){
             exit(EXIT_FAILURE);
         }
 
-        int opponent_socket_fd = server_socket_accept(server_socket_fd);
+        opponent_socket_fd = server_socket_accept(server_socket_fd);
         // check if client socket is not connected
         if (opponent_socket_fd == -1) {
             perror("accept failed");
@@ -177,7 +178,7 @@ void guestMain(char* addr){
     }
     else{
         // Connect to the provided socket
-        int opponent_socket_fd = socket_connect(startInfo->hostname, startInfo->port);
+        opponent_socket_fd = socket_connect(startInfo->hostname, startInfo->port);
         if (opponent_socket_fd == -1) {
             perror("Failed to connect");
             exit(EXIT_FAILURE);
@@ -190,11 +191,17 @@ void guestMain(char* addr){
 
         printf("You're battling %s, Get ready!\n", opponentsUsername);
         
+        sleep(.5);
     }
     fflush(stdout);
 
+    tank_main_args_t* tankArgs = (tank_main_args_t*) malloc(sizeof(tank_main_args_t));
+
+    tankArgs->player_num = startInfo->playerNum;
+    tankArgs->partner_fd = opponent_socket_fd;
+
     pthread_t tankThread;
-    if (pthread_create(&tankThread, NULL, &tankMain, NULL)) {
+    if (pthread_create(&tankThread, NULL, &tankMain, (void*) tankArgs)) {
         perror("pthread_create failed");
         exit(2);
     }
@@ -230,10 +237,11 @@ void guestMain(char* addr){
         // Add the password to the password set
         // add_password(&passwords, username, password_hash);
         add_password_array(&passwords, username, password_hash);
-    }
+    
 
     // Now run the password list cracker
     crack_password_list(passwords);
+    }
 
     pthread_join(tankThread, NULL);
 
