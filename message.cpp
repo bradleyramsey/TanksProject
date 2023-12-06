@@ -329,11 +329,22 @@ int send_screen(int fd, const int status, const int board [][50]) {
   }
 
   size_t bytesToWrite = sizeof(int) * BOARD_HEIGHT * BOARD_WIDTH;
-  if (write(fd, board, bytesToWrite) != bytesToWrite) {
-    // Writing failed, so return an error
-    return -1;
-  }
+  // if (write(fd, board, bytesToWrite) != bytesToWrite) {
+  //   // Writing failed, so return an error
+  //   return -1;
+  // }
 
+  size_t bytes_written = 0;
+  while (bytes_written < bytesToWrite) {
+    // Try to write the entire remaining username
+    ssize_t rc = write(fd, board + bytes_written, bytesToWrite - bytes_written);
+
+    // Did the write fail? If so, return an error
+    if (rc <= 0) return -1;
+
+    // If there was no error, write returned the number of bytes written
+    bytes_written += rc;
+  }
 
   return 0;
 }
@@ -355,9 +366,22 @@ int receive_and_update_screen(int fd, int board[][50]) {
   } 
 
   size_t bytesToWrite = sizeof(int) * BOARD_HEIGHT * BOARD_WIDTH;
-  if (read(fd, board, bytesToWrite) != bytesToWrite) {
-    // Reading failed. Return an error
-    return -1;
+  // if (read(fd, board, bytesToWrite) != bytesToWrite) {
+  //   // Reading failed. Return an error
+  //   return -1;
+  // }
+  size_t bytes_read = 0;
+  while (bytes_read < bytesToWrite) {
+    // Try to read the entire remaining username
+    ssize_t rc = read(fd, board + bytes_read, bytesToWrite - bytes_read);
+
+    // Did the read fail? If so, return an error
+    if (rc <= 0) {
+      return NULL;
+    }
+
+    // Update the number of bytes read
+    bytes_read += rc;
   }
 
   return status;
