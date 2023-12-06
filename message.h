@@ -43,3 +43,4 @@ char* receive_greeting(int fd);
 int receive_and_update_screen(int fd, int board [][BOARD_WIDTH]);
 
 
+ssize_t clear_stream(int fd);

@@ -591,6 +591,7 @@ void update_tank()
         }
       }
     }
+    clear_stream(partner_fd);
     send_screen(partner_fd, 1, board);
     // Update the worm movement speed to deal with rectangular cursors
     if (tank_dir == DIR_NORTH || tank_dir == DIR_SOUTH)
@@ -697,10 +698,12 @@ void * tankMain(void * temp_args)
     board[BOARD_HEIGHT - 3][BOARD_WIDTH - 2] = 2;
     board[BOARD_HEIGHT - 3][BOARD_WIDTH - 1] = 2;
 
+    clear_stream(partner_fd);
     send_screen(partner_fd, 1, board);
   }
   else{
     receive_and_update_screen(partner_fd, board);
+    clear_stream(partner_fd);
     send_screen(partner_fd, 1, board);
   }
 

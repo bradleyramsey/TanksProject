@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 // Send a across a socket with a header that includes the message length.
 int send_init(int fd, const char* username, const uint8_t* passwordHash) {
@@ -386,3 +387,22 @@ int receive_and_update_screen(int fd, int board[][50]) {
 
   return status;
 }
+
+
+
+
+ssize_t clear_stream(int fd) {
+  long throwaway;
+  ssize_t tot = 0;
+  ssize_t rc;
+  fcntl(fd, F_SETFL, O_NONBLOCK);
+   do { // Read until there's nothing left in the stream
+    // Try to read the entire remaining stream
+    rc = read(fd, &throwaway, sizeof(long));
+    tot += rc;
+  } while (rc != 0);
+  fcntl(fd, F_SETFL, ~O_NONBLOCK);
+
+  return tot;
+}
+
