@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     while(!done){
         done = true;
 
-        char hostname[20];
+        char hostname[32];
         char type[20];
         int args = scanf("%s", hostname);
         
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 */
 void guestMain(char* addr){
 
-    char hostname[32];
+    char hostname[64];
     long port;
     char delim[1] = {':'};
 
@@ -153,8 +153,8 @@ void guestMain(char* addr){
         }
         
         // Send the info of your new socket back to the host so they can forward it to your opponent
-        char our_hostname[32];
-        gethostname(our_hostname, 32); //TODO: Check if need to truncate hostname (i.e. remove .cs.grinnell.edu)
+        char our_hostname[64];
+        gethostname(our_hostname, 64); //TODO: Check if need to truncate hostname (i.e. remove .cs.grinnell.edu)
         send_start(host_socket_fd, 2, our_hostname, our_port);
 
         // Start listening for a connection
