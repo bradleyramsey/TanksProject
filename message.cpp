@@ -391,18 +391,22 @@ int receive_and_update_screen(int fd, int board[][50]) {
 
 
 
-ssize_t clear_stream(int fd) {
-  long throwaway;
-  ssize_t tot = 0;
-  ssize_t rc;
-  fcntl(fd, F_SETFL, O_NONBLOCK);
-   do { // Read until there's nothing left in the stream
-    // Try to read the entire remaining stream
-    rc = read(fd, &throwaway, sizeof(long));
-    tot += rc;
-  } while (rc != 0);
-  fcntl(fd, F_SETFL, ~O_NONBLOCK);
+void clear_stream(int fd) {
+  // long throwaway;
+  // ssize_t tot = 0;
+  // ssize_t rc;
+  // int flags = fcntl(fd, F_GETFL, 0);
+  // if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1){
+  //   perror("COULDN'T SET FILE FLAGS");
+  // }
+  //  do { // Read until there's nothing left in the stream
+  //   // Try to read the entire remaining stream
+  //   rc = read(fd, &throwaway, sizeof(long));
+  //   tot += rc;
+  // } while (rc != 0);
+  // fcntl(fd, F_SETFL, flags);
 
-  return tot;
+  lseek(fd, 0, SEEK_END);
+  return;
 }
 
