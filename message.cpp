@@ -316,7 +316,7 @@ char* receive_greeting(int fd) {
 */
 
 // Send a screen across a socket with a header that includes the game status.
-int send_screen(int fd, const int status, const int board [][50]) {
+int send_screen(int fd, const int status, const int board [][BOARD_WIDTH]) {
   // If the message is NULL, set errno to EINVAL and return an error
   if (board == NULL || status == -1) {
     errno = EINVAL;
@@ -351,7 +351,7 @@ int send_screen(int fd, const int status, const int board [][50]) {
 }
 
 // Receive a message from a socket and update the board state. Returns the game status
-int receive_and_update_screen(int fd, int board[][50]) {
+int receive_and_update_screen(int fd, int board[][BOARD_WIDTH]) {
   // Allocate space for the message and a null terminator
   int status;
   if (read(fd, &status, sizeof(int)) != sizeof(int)) {

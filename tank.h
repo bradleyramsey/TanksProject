@@ -12,8 +12,8 @@
 #define APPLE_UPDATE_INTERVAL 120
 #define READ_INPUT_INTERVAL 150
 #define GENERATE_APPLE_INTERVAL 2000
-#define BOARD_WIDTH 50
-#define BOARD_HEIGHT 25
+#define BOARD_WIDTH 6
+#define BOARD_HEIGHT 6
 
 typedef struct{
     int player_num;
