@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/socket.h>
 
 // Send a across a socket with a header that includes the message length.
 int send_init(int fd, const char* username, const uint8_t* passwordHash) {
@@ -338,7 +339,7 @@ int send_screen(int fd, const int status, const int board [][BOARD_WIDTH]) {
   size_t bytes_written = 0;
   while (bytes_written < bytesToWrite) {
     // Try to write the entire remaining username
-    ssize_t rc = write(fd, board + bytes_written, bytesToWrite - bytes_written);
+    ssize_t rc = send(fd, board + bytes_written, bytesToWrite - bytes_written, 0);
 
     // Did the write fail? If so, return an error
     if (rc <= 0) return -1;
@@ -366,24 +367,26 @@ int receive_and_update_screen(int fd, int board[][BOARD_WIDTH]) {
     return -1;
   } 
 
-  size_t bytesToWrite = sizeof(int) * BOARD_HEIGHT * BOARD_WIDTH;
-  // if (read(fd, board, bytesToWrite) != bytesToWrite) {
+  size_t bytesToRead = sizeof(int) * BOARD_HEIGHT * BOARD_WIDTH;
+  // if (read(fd, board, bytesToRead) != bytesToRead) {
   //   // Reading failed. Return an error
   //   return -1;
   // }
-  size_t bytes_read = 0;
-  while (bytes_read < bytesToWrite) {
-    // Try to read the entire remaining username
-    ssize_t rc = read(fd, board + bytes_read, bytesToWrite - bytes_read);
+  // size_t bytes_read = 0;
+  // while (bytes_read < bytesToRead) {
+  //   // Try to read the entire remaining username
+  //   ssize_t rc = read(fd, board + bytes_read, bytesToRead - bytes_read);
 
-    // Did the read fail? If so, return an error
-    if (rc <= 0) {
-      return -1;
-    }
+  //   // Did the read fail? If so, return an error
+  //   if (rc <= 0) {
+  //     return -1;
+  //   }
 
-    // Update the number of bytes read
-    bytes_read += rc;
-  }
+  //   // Update the number of bytes read
+  //   bytes_read += rc;
+  // }
+
+  recv(fd, board, bytesToRead, MSG_WAITALL);
 
   return status;
 }
