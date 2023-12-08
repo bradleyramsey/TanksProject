@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/socket.h>
 
 // Send a across a socket with a header that includes the message length.
 int send_init(int fd, const char* username, const uint8_t* passwordHash) {
@@ -315,7 +317,7 @@ char* receive_greeting(int fd) {
 */
 
 // Send a screen across a socket with a header that includes the game status.
-int send_screen(int fd, const int status, const int board [][50]) {
+int send_screen(int fd, const int status, const int board [][BOARD_WIDTH]) {
   // If the message is NULL, set errno to EINVAL and return an error
   if (board == NULL || status == -1) {
     errno = EINVAL;
@@ -329,17 +331,28 @@ int send_screen(int fd, const int status, const int board [][50]) {
   }
 
   size_t bytesToWrite = sizeof(int) * BOARD_HEIGHT * BOARD_WIDTH;
-  if (write(fd, board, bytesToWrite) != bytesToWrite) {
-    // Writing failed, so return an error
-    return -1;
-  }
+  // if (write(fd, board, bytesToWrite) != bytesToWrite) {
+  //   // Writing failed, so return an error
+  //   return -1;
+  // }
 
+  size_t bytes_written = 0;
+  while (bytes_written < bytesToWrite) {
+    // Try to write the entire remaining username
+    ssize_t rc = send(fd, board + bytes_written, bytesToWrite - bytes_written, 0);
+
+    // Did the write fail? If so, return an error
+    if (rc <= 0) return -1;
+
+    // If there was no error, write returned the number of bytes written
+    bytes_written += rc;
+  }
 
   return 0;
 }
 
 // Receive a message from a socket and update the board state. Returns the game status
-int receive_and_update_screen(int fd, int board[][50]) {
+int receive_and_update_screen(int fd, int board[][BOARD_WIDTH]) {
   // Allocate space for the message and a null terminator
   int status;
   if (read(fd, &status, sizeof(int)) != sizeof(int)) {
@@ -354,11 +367,10 @@ int receive_and_update_screen(int fd, int board[][50]) {
     return -1;
   } 
 
-  size_t bytesToWrite = sizeof(int) * BOARD_HEIGHT * BOARD_WIDTH;
-  if (read(fd, board, bytesToWrite) != bytesToWrite) {
-    // Reading failed. Return an error
-    return -1;
-  }
+  size_t bytesToRead = sizeof(int) * BOARD_HEIGHT * BOARD_WIDTH;
+
+  // Read the whole board, thanks to the big man above... Charlie Curtsinger
+  recv(fd, board, bytesToRead, MSG_WAITALL);
 
   return status;
 }

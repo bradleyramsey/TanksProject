@@ -41,5 +41,3 @@ init_packet_t* receive_init(int fd);
 start_packet_t* receive_start(int fd);
 char* receive_greeting(int fd);
 int receive_and_update_screen(int fd, int board [][BOARD_WIDTH]);
-
-
