@@ -174,7 +174,6 @@ void guestMain(char* addr){
         // Once they connect, exchange greetings and then send the starting board
         send_greeting(opponent_socket_fd, username);
         opponentsUsername = receive_greeting(opponent_socket_fd);
-        clear_stream(opponent_socket_fd);
         printf("You're battling %s, Get ready!", opponentsUsername);
     }
     else{
@@ -188,7 +187,6 @@ void guestMain(char* addr){
 
         // Exchange greetings and start listening for the first board state
         opponentsUsername = receive_greeting(opponent_socket_fd);
-        clear_stream(opponent_socket_fd);
         send_greeting(opponent_socket_fd, username);
 
         printf("You're battling %s, Get ready!\n", opponentsUsername);

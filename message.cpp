@@ -368,48 +368,9 @@ int receive_and_update_screen(int fd, int board[][BOARD_WIDTH]) {
   } 
 
   size_t bytesToRead = sizeof(int) * BOARD_HEIGHT * BOARD_WIDTH;
-  // if (read(fd, board, bytesToRead) != bytesToRead) {
-  //   // Reading failed. Return an error
-  //   return -1;
-  // }
-  // size_t bytes_read = 0;
-  // while (bytes_read < bytesToRead) {
-  //   // Try to read the entire remaining username
-  //   ssize_t rc = read(fd, board + bytes_read, bytesToRead - bytes_read);
 
-  //   // Did the read fail? If so, return an error
-  //   if (rc <= 0) {
-  //     return -1;
-  //   }
-
-  //   // Update the number of bytes read
-  //   bytes_read += rc;
-  // }
-
+  // Read the whole board, thanks to the big man above... Charlie Curtsinger
   recv(fd, board, bytesToRead, MSG_WAITALL);
 
   return status;
 }
-
-
-
-
-void clear_stream(int fd) {
-  // long throwaway;
-  // ssize_t tot = 0;
-  // ssize_t rc;
-  // int flags = fcntl(fd, F_GETFL, 0);
-  // if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1){
-  //   perror("COULDN'T SET FILE FLAGS");
-  // }
-  //  do { // Read until there's nothing left in the stream
-  //   // Try to read the entire remaining stream
-  //   rc = read(fd, &throwaway, sizeof(long));
-  //   tot += rc;
-  // } while (rc != 0);
-  // fcntl(fd, F_SETFL, flags);
-
-  lseek(fd, 0, SEEK_END);
-  return;
-}
-
