@@ -9,7 +9,7 @@
 #define MAX_USERNAME_LENGTH 64
 #define PASSWORD_LENGTH 7
 
-#define numBucketsAndMask 128 // Needs to be at least as large as the max # of players
+#define numBucketsAndMask 127 // Needs to be at least as large as the max # of players
 
 // /**
 //  * This struct is the root of the data structure that will hold users and hashed passwords.

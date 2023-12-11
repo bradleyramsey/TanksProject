@@ -319,7 +319,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
       md5String(candidate_passwd, PASSWORD_LENGTH, candidate_hash);
 
       // Get the bucket corresponding to the hash
-      hash_index = (candidate_passwd[0] & numBucketsAndMask);
+      hash_index = (candidate_hash[0] & numBucketsAndMask);
 
       // Now check if the hash of the candidate password matches any of the hashs in the bucket, 
       // going along till we get to an empty one. Since they needed to be all sent together, an array was best
@@ -338,7 +338,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
       // }
       candidate_passwd[0] += numUsersGPU;
     }
-    candidate_passwd[0] = 'a';
+    candidate_passwd[0] = 'a' + offsetGPU;
     candidate_passwd[1]++;
   }
   // Potential TODO: Add check somewhere if we've cracked all passwords? This would be tough among all 
