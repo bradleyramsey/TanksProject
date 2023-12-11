@@ -407,13 +407,10 @@ void draw_board()
         {
           mvaddch(screen_row(r), screen_col(c), 'x'); // Draw bullet
         }
-        // WE SHOULDNT NEED APPLES ANYMORE,  POSSIBLE WEAPONS
-        // else {  // Draw apple spinner thing
-        //   char spinner_chars[] = {'|', '/', '-', '\\'};
-        //   mvaddch(screen_row(r), screen_col(c), spinner_chars[abs(board[r][c] % 4)]);
-        // }
       }
     }
+
+    // Reset values to draw tanks
     draw_p1 = 0;
     draw_p2 = 0;
 
@@ -580,6 +577,7 @@ void update_tank()
         fire_weapon = false;
       }
     }
+    // Move the tank based on the direction the tank is facing
     if (tank_dir == DIR_NORTH)
     {
       tank_up(board, tank_center_row, tank_center_col);
@@ -596,6 +594,8 @@ void update_tank()
     {
       tank_left(board, tank_center_row, tank_center_col);
     }
+
+    // Get player num, and stop the tank after it has moved
     if (player_num == 1){
       updated_tank_dir_p1 = -1;
     }
@@ -625,47 +625,6 @@ void update_tank()
     }
   }
 }
-
-/**
- * Run in a task to update all the apples on the board.
- */
-// void update_apples() {
-//   while (running) {
-//     // "Age" each apple
-//     for (int r = 0; r < BOARD_HEIGHT; r++) {
-//       for (int c = 0; c < BOARD_WIDTH; c++) {
-//         if (board[r][c] < 0) {  // Add one to each apple cell
-//           board[r][c]++;
-//         }
-//       }
-//     }
-
-//     task_sleep(APPLE_UPDATE_INTERVAL);
-//   }
-// }
-
-/**
- * Run in a task to generate apples on the board.
- */
-// void generate_apple() {
-//   while (running) {
-//     bool inserted = false;
-//     // Repeatedly try to insert an apple at a random empty cell
-//     while (!inserted) {
-//       int r = rand() % BOARD_HEIGHT;
-//       int c = rand() % BOARD_WIDTH;
-
-//       // If the cell is empty, add an apple
-//       if (board[r][c] == 0) {
-//         // Pick a random age between apple_age/2 and apple_age*1.5
-//         // Negative numbers represent apples, so negate the whole value
-//         board[r][c] = -((rand() % apple_age) + apple_age / 2);
-//         inserted = true;
-//       }
-//     }
-//     task_sleep(GENERATE_APPLE_INTERVAL);
-//   }
-// }
 
 // Entry point: Set up the game, create jobs, then run the scheduler
 void * tankMain(void * temp_args)
@@ -731,25 +690,16 @@ void * tankMain(void * temp_args)
   task_t update_tank_task;
   task_t draw_board_task;
   task_t read_input_task;
-  // task_t update_apples_task;
-  // task_t generate_apple_task;
-  // task_t update_weapon_task;
 
   // Create tasks for each task in the game
   task_create(&draw_board_task, draw_board);
   task_create(&update_tank_task, update_tank);
   task_create(&read_input_task, read_input);
-  // task_create(&update_apples_task, update_apples);
-  // task_create(&generate_apple_task, generate_apple);
-  // task_create(&update_weapon_task, update_weapon);
 
   // Wait for these tasks to exit
   task_wait(update_tank_task);
   task_wait(draw_board_task);
   task_wait(read_input_task);
-  // task_wait(update_weapon_task);
-  // task_wait(update_apples_task);
-  // task_wait(update_weapon_task);
 
   // Don't wait for the generate_apple task because it sleeps for 2 seconds,
   // which creates a noticeable delay when exiting.
