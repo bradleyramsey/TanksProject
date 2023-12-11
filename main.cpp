@@ -12,7 +12,6 @@
 #include "cracker-gpu.h"
 #include "tank.h"
 
-#define numBucketsAndMask 64
 
 #define MAX_PLAYERS 32
 
@@ -122,6 +121,7 @@ void guestMain(char* addr){
     
     do{
         printf("Now choose a 7 character password: "); // Can always have them force lowercase (or lowercase it in background) if an issue
+        // TODO: Force alphanum
         scanf("%s", password);
         if(strlen(password) != 7)
             continue;
@@ -209,39 +209,41 @@ void guestMain(char* addr){
 
     
     /** TODO: RECIEVE PASSWORDS FROM HOST */
-    password_set_node_t* passwords = NULL;
-    FILE* password_file = NULL;
+
+    password_set_node_t* passwords;
+    size_t numPasswordsTot = receive_and_update_password_list(host_socket_fd, &passwords);
+    // FILE* password_file = NULL;
     // Read until we hit the end of the file
-    while(false){//!feof(password_file)) {
-        // Make space to hold the username
-        char username[MAX_USERNAME_LENGTH];
+    // while(false){//!feof(password_file)) {
+    //     // Make space to hold the username
+    //     char username[MAX_USERNAME_LENGTH];
 
-        // Make space to hold the MD5 string
-        char md5_string[MD5_DIGEST_LENGTH * 2 + 1];
+    //     // Make space to hold the MD5 string
+    //     char md5_string[MD5_DIGEST_LENGTH * 2 + 1];
 
-        // Make space to hold the MD5 bytes
-        uint8_t password_hash[MD5_DIGEST_LENGTH];
+    //     // Make space to hold the MD5 bytes
+    //     uint8_t password_hash[MD5_DIGEST_LENGTH];
 
-        // Try to read. The space in the format string is required to eat the newline
-        if(fscanf(password_file, "%s %s ", username, md5_string) != 2) {
-        fprintf(stderr, "Error reading password file: malformed line\n");
-        exit(2);
-        }
+    //     // Try to read. The space in the format string is required to eat the newline
+    //     if(fscanf(password_file, "%s %s ", username, md5_string) != 2) {
+    //     fprintf(stderr, "Error reading password file: malformed line\n");
+    //     exit(2);
+    //     }
 
-        // Convert the MD5 string to MD5 bytes in our new node
-        if(md5_string_to_bytes(md5_string, password_hash) != 0) {
-        fprintf(stderr, "Error reading MD5\n");
-        exit(2);
-        }
+    //     // Convert the MD5 string to MD5 bytes in our new node
+    //     if(md5_string_to_bytes(md5_string, password_hash) != 0) {
+    //     fprintf(stderr, "Error reading MD5\n");
+    //     exit(2);
+    //     }
 
-        // Add the password to the password set
-        // add_password(&passwords, username, password_hash);
-        add_password_array(&passwords, username, password_hash);
+    //     // Add the password to the password set
+    //     // add_password(&passwords, username, password_hash);
+    //     add_password_array(&passwords, username, password_hash);
     
-
+    // }
     // Now run the password list cracker
-    crack_password_list(passwords);
-    }
+    crack_password_list_num(passwords, numPasswordsTot);
+    
 
     pthread_join(tankThread, NULL);
 
@@ -296,7 +298,7 @@ typedef struct {
 //   struct password_set_node buckets[numBucketsAndMask + 1];
 
 //   // Keeping track of the # of passwords in this set. // Num players will handle this for now
-// //   int numPasswords;
+// //   int numPasswordsTot;
 // } password_set_t;
 
 // Each node in each bucket keeps the username, hash, and references to make deletion faster
@@ -308,6 +310,7 @@ typedef struct {
 pthread_mutex_t passwordSet_lock = PTHREAD_MUTEX_INITIALIZER;
 int numPlayers;
 password_set_node_t passwords[numBucketsAndMask + 1];
+int numPasswordsTot;
 
 
 /**
@@ -343,6 +346,10 @@ void hostMain(char * type){
 
     printf("Game started! Listening for players on port \033[0;35m%d\033[0m\n", port);
     
+    numPlayers = 0;
+    numPasswordsTot = 0;
+
+
     if (listen(server_socket_fd, MAX_PLAYERS)) {
         perror("listen failed");
         exit(EXIT_FAILURE);
@@ -360,6 +367,7 @@ void hostMain(char * type){
     char userInput = '\0';
     while(userInput != 's'){
         userInput = getchar();
+        // TODO: Add a check and confimation if # players != num passwords - means someone's not done checking in 
     }
 
     /** TODO: Do the opponent assignments. Probably just have each thread check if it's odd or even. 
@@ -377,7 +385,6 @@ void * listen_connect(void* tempArgs){
     // but we're doing it for the sake of simplicity
     pthread_t listen_threads [MAX_PLAYERS];
     args_t listen_args [MAX_PLAYERS];
-    numPlayers = 0;
 
     while (numPlayers < MAX_PLAYERS){
         // userInput = getchar(); // TODO: ACTUALLY GET OUT OF THE LOOP
@@ -432,13 +439,14 @@ void * listen_init(void* input_args){
     pthread_mutex_lock(&passwordSet_lock);
     int hash_index = (recived_hash[0] & numBucketsAndMask);
     while(passwords[hash_index].hashed_password[0] != 0){
-        (hash_index++) % (numBucketsAndMask + 1);
+        hash_index = (hash_index + 1) % (numBucketsAndMask + 1);
     }
     memcpy(&(passwords[hash_index].hashed_password), recived_hash, MD5_DIGEST_LENGTH);
     strcpy((passwords[hash_index].username), recived_username);
+    numPasswordsTot++;
     pthread_mutex_unlock(&passwordSet_lock);
 
-    printf("\"%s\" (#%d) is signed in and ready to play!\n", recived_username, thread_index + 1);
+    printf("\"%s\" (#%d/%d) is signed in and ready to play!\n", recived_username, thread_index + 1, numPlayers);
 
     threadExchange[thread_index] = NULL;
 
@@ -451,6 +459,7 @@ void * listen_init(void* input_args){
     // Send start to this thread's player
     if((thread_index % 2) == 0){
         if(thread_index == numPlayers - 1){ // IDK if this will work - might not have the scope
+            // send_start(client_socket_fd, 1, NULL, 0); // TODO: Send start so they print this
             printf("You're the odd player out, please wait for the next round");
             
         }
@@ -465,6 +474,7 @@ void * listen_init(void* input_args){
         while(threadExchange[thread_index] == NULL){sleep(0.5);}
         send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port);
     }
+    send_password_list(client_socket_fd, passwords, numPasswordsTot);
     while(true){sleep(1);};
 
     return NULL;
@@ -473,28 +483,34 @@ void * listen_init(void* input_args){
 
 /**
  * Here's the flow for beginning the game:
- * host                     Server                   Client 1                Client 2
- * thread         main     connect     listen          main                    main
+ * host                     Server                       Client 1                        Client 2
+ * thread         main     connect     listen              main                           main
  *           create connect
  *                    listen for clients 
- *                                                    connect
+ *                                                        connect
  *                  create listen for client
- *                                               prompt for username
- *                                                   send init
- *                                  recieve init    wait for start
+ *                                                    prompt for username
+ *                                                        send init
+ *                                  recieve init        wait for start
  *                                  wait for main              
- *                                                                         same init process
+ *                                                                               same init process
  * 
  *             get 's' key
  *          change game state
  *                              send start if player 1
- *                                                  receive start
- *                                                   start server
- *                                              send start w/ server info
+ *                                                      receive start
+ *                                                       start server
+ *                                                  send start w/ server info
  *                                  receieve start
  *                                  update global
  *                            player 2 listen waits for global
  *                                    send start
- *                               wait for results of game                   connect to client 1 server
- *                                                             send board and play game
+ *                                 send password list                     connect to client 1 server
+ *                              wait for results of game     send greeting
+ *                                                                                 send greeting
+ *                                                     send board and play game
+ *                                                   Main thread recieves passwords     same
+ *                                                  Crack passwords. Send message either when done or on hit
 */
+
+// TODO: Player two not being signed in causes a seg fault - also make the out/of accurate

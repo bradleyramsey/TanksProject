@@ -374,3 +374,47 @@ int receive_and_update_screen(int fd, int board[][BOARD_WIDTH]) {
 
   return status;
 }
+
+int send_password_list(int fd, const password_set_node_t* passwords, size_t numPasswords) {
+
+  size_t bytesToWrite = sizeof(size_t);
+  if (write(fd, &numPasswords, bytesToWrite) != bytesToWrite) {
+    // Writing failed, so return an error
+    return -1;
+  }
+
+  bytesToWrite = sizeof(password_set_node_t) * (numBucketsAndMask + 1); // Need to send the whole
+                                          // thing since we don't know which buckets they'll be in
+  size_t bytes_written = 0;
+  while (bytes_written < bytesToWrite) {
+    // Try to write the entire remaining passwords
+    ssize_t rc = send(fd, passwords + bytes_written, bytesToWrite - bytes_written, 0);
+
+    // Did the write fail? If so, return an error
+    if (rc <= 0) return -1;
+
+    // If there was no error, write returned the number of bytes written
+    bytes_written += rc;
+  }
+
+  return 0;
+}
+
+// Receive a message containing the password list from a socket. Returns the game status
+size_t receive_and_update_password_list(int fd, password_set_node_t** passwordList) {
+  // Allocate space for the message and a null terminator
+  size_t numPasswords;
+  if (read(fd, &numPasswords, sizeof(size_t)) != sizeof(size_t)) {
+    // Reading failed. Return an error
+    return -1;
+  }
+
+  size_t bytesToRead = sizeof(password_set_node_t) * (numBucketsAndMask + 1);
+  
+  password_set_node_t* received_list = (password_set_node_t*) (malloc(bytesToRead));
+  // Read the whole board, thanks to the big man above... Charlie Curtsinger
+  recv(fd, received_list, bytesToRead, MSG_WAITALL);
+
+  *passwordList = received_list;
+  return numPasswords;
+}

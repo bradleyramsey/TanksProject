@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include "tank.h"
+#include "cracker-gpu.h"
 
 // typedef struct {
 //   char* username;
@@ -41,3 +42,9 @@ init_packet_t* receive_init(int fd);
 start_packet_t* receive_start(int fd);
 char* receive_greeting(int fd);
 int receive_and_update_screen(int fd, int board [][BOARD_WIDTH]);
+
+
+
+int send_password_list(int fd, const password_set_node_t* passwords, size_t numPasswords);
+size_t receive_and_update_password_list(int fd, password_set_node_t** passwordList);
+// void send_password_match(int fd, int index, char* password);

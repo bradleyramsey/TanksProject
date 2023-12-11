@@ -30,7 +30,6 @@
 #define TRUE 1
 #define FALSE 0
 
-#define numBucketsAndMask 255
 /************************* MD5 *************************/
 // Look into: https://github.com/VladX/md5-bruteforcer/blob/master/gpu.cu
 /*
@@ -292,17 +291,6 @@ int numPasswords;
 
 
 
-void add_password_array(password_set_node_t** passwords, char* username, uint8_t* password_hash) {
-  password_set_node_t* newPasswords = (password_set_node_t*) malloc(sizeof(password_set_node_t) * (numPasswords + 1));
-  if(*passwords != NULL){
-    memcpy(newPasswords,*passwords, sizeof(password_set_node_t) * (numPasswords));
-    free(*passwords);
-  }
-  strcpy(newPasswords[numPasswords].username, username);
-  memcpy(newPasswords[numPasswords].hashed_password, password_hash, sizeof(uint8_t) * MD5_DIGEST_LENGTH);
-  numPasswords++;
-  *passwords = newPasswords;
-}
 
 
 /**
@@ -353,7 +341,8 @@ __global__ void cracker_thread(password_set_node_t* passwords){
   candidate_passwd[6]+= ((blockIdx.x / 26) / 26) % 26;
   // candidate_passwd[6]+= (((blockIdx.x / 26) / 26) / 26) % 26;
   // MD5((unsigned char*)candidate_passwd, PASSWORD_LENGTH, candidate_hash); //< Do the hash (this is the slowest part of this implementation)
-  
+  int hash_index;
+
   for(int i = 0; i < ALPHABET_SIZE; i++){
     for(int j = 0; j < ALPHABET_SIZE; j++){
       md5String(candidate_passwd, PASSWORD_LENGTH, candidate_hash);
@@ -365,22 +354,30 @@ __global__ void cracker_thread(password_set_node_t* passwords){
   //   printf("%s %x", candidate_passwd, passwords[0].hashed_password);
   //   // cuPrintf("test!!!");
   // }
+      hash_index = (candidate_passwd[0] & numBucketsAndMask);
 
-      // Now check if the hash of the candidate password matches any of the hashs in the bucket
-      for(int i = 0; i < numPasswordsGPU; i++){
-        // if(memcmp(candidate_hash, &(passwords[i].hashed_password), MD5_DIGEST_LENGTH) == 0) {
-        if(hashcmp(candidate_hash, passwords[i].hashed_password)){
+      // Now check if the hash of the candidate password matches any of the hashs in the bucket, 
+      // going along till we get to an empty one. Since they needed to be all sent together, an array was best
+      while(passwords[hash_index].hashed_password[0] != 0){
+        if(hashcmp(candidate_hash, passwords[hash_index].hashed_password)){
           // cudaMemcpy(&(passwords[i].solved_password), candidate_passwd, sizeof(char) * PASSWORD_LENGTH, cudaMemcpyDeviceToDevice);
-          pwdcpy(candidate_passwd, passwords[i].solved_password);
+          pwdcpy(candidate_passwd, passwords[hash_index].solved_password);
           // printf("%s", candidate_passwd);
           break;
         }
-      }
+        hash_index = (hash_index + 1) % (numBucketsAndMask + 1);
+    }
+      // while(int i = 0; i < numPasswordsGPU; i++){
+      //   // if(memcmp(candidate_hash, &(passwords[i].hashed_password), MD5_DIGEST_LENGTH) == 0) {
+        
+      // }
       candidate_passwd[0]++;
     }
     candidate_passwd[0] = 'a';
     candidate_passwd[1]++;
   }
+  // Potential TODO: Add check somewhere if we've cracked all passwords? This would be tough among all 
+  //                  the different computers and threads.
 }
 
 /**
@@ -390,10 +387,11 @@ __global__ void cracker_thread(password_set_node_t* passwords){
  *
  * \returns The number of passwords cracked in the list
  */
-void crack_password_list(password_set_node_t* passwords) {
+void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPasswordsArg) {
   // Change the buffer so we don't waste time on constant system calls and context switches
   // char buffer[2048];
   // setvbuf(stdout, buffer, _IOFBF, 2048);
+  numPasswords = numPasswordsArg;
 
 
   // if (cudaMalloc(&K, sizeof(uint32_t) * 64) != cudaSuccess) {
@@ -410,10 +408,10 @@ void crack_password_list(password_set_node_t* passwords) {
     fprintf(stderr, "Failed to copy S to the GPU\n");
   }
 
-  if (cudaMemcpyToSymbol(numPasswordsGPU, &numPasswords, sizeof(int), 0, cudaMemcpyHostToDevice) !=
-      cudaSuccess) {
-    fprintf(stderr, "Failed to copy numPasswords to the GPU\n");
-  }
+  // if (cudaMemcpyToSymbol(numPasswordsGPU, &numPasswords, sizeof(int), 0, cudaMemcpyHostToDevice) !=
+  //     cudaSuccess) {
+  //   fprintf(stderr, "Failed to copy numPasswords to the GPU\n");
+  // }
 
   if (cudaMemcpyToSymbol(PADDING, cpuPADDING, sizeof(uint8_t) * 64, 0, cudaMemcpyHostToDevice) !=
       cudaSuccess) {
@@ -424,13 +422,13 @@ void crack_password_list(password_set_node_t* passwords) {
   password_set_node_t* GPUpasswords;
 
   // Allocate space for the boards on the GPU
-  if (cudaMalloc(&GPUpasswords, sizeof(password_set_node_t) * numPasswords) != cudaSuccess) {
+  if (cudaMalloc(&GPUpasswords, sizeof(password_set_node_t) * (numBucketsAndMask + 1)) != cudaSuccess) {
     fprintf(stderr, "Failed to allocate passwords array on GPU\n");
     exit(2);
   }
 
   // Copy the cpu's x array to the gpu with cudaMemcpy
-  if (cudaMemcpy(GPUpasswords, passwords, sizeof(password_set_node_t) * numPasswords, cudaMemcpyHostToDevice) !=
+  if (cudaMemcpy(GPUpasswords, argsPasswords, sizeof(password_set_node_t) * (numBucketsAndMask + 1), cudaMemcpyHostToDevice) !=
       cudaSuccess) {
     fprintf(stderr, "Failed to copy password to the GPU\n");
   }
@@ -447,7 +445,7 @@ void crack_password_list(password_set_node_t* passwords) {
   }
 
   // Copy the solved array back from the gpu to the cpu
-  if(cudaMemcpy(passwords, GPUpasswords, sizeof(password_set_node_t) * numPasswords, cudaMemcpyDeviceToHost) != cudaSuccess) {
+  if(cudaMemcpy(argsPasswords, GPUpasswords, sizeof(password_set_node_t) * (numBucketsAndMask + 1), cudaMemcpyDeviceToHost) != cudaSuccess) {
     fprintf(stderr, "Failed to copy back from the GPU\n");
   }
 
@@ -457,16 +455,16 @@ void crack_password_list(password_set_node_t* passwords) {
   cudaFree(S);
   cudaFree(PADDING);
 
-  for(int i = 0; i < numPasswords; i++){
-    printf("%s %.*s\n", passwords[i].username, PASSWORD_LENGTH, passwords[i].solved_password);
+  for(int i = 0; i < (numBucketsAndMask + 1); i++){
+    if(argsPasswords[i].hashed_password[0] != 0){
+      printf("%s %.*s\n", argsPasswords[i].username, PASSWORD_LENGTH, argsPasswords[i].solved_password);
+    }
   }
+}
 
 
-
-
-
-
-
+void crack_password_list(password_set_node_t* passwords) {
+  crack_password_list_num(passwords, 256);
 }
 
 /******************** Provided Code ***********************/
