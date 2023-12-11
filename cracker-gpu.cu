@@ -353,16 +353,9 @@ __global__ void cracker_thread(password_set_node_t* passwords){
  * \returns The number of passwords cracked in the list
  */
 void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd) {
-  // Change the buffer so we don't waste time on constant system calls and context switches
-  // char buffer[2048];
-  // setvbuf(stdout, buffer, _IOFBF, 2048);
   numPasswords = numPasswordsArg;
 
 
-  // if (cudaMalloc(&K, sizeof(uint32_t) * 64) != cudaSuccess) {
-  //   fprintf(stderr, "Failed to allocate K array on GPU\n");
-  //   exit(2);
-  // }
   if (cudaMemcpyToSymbol(K, cpuK, sizeof(uint32_t) * 64, 0, cudaMemcpyHostToDevice) !=
       cudaSuccess) {
     fprintf(stderr, "Failed to copy K to the GPU\n");
@@ -407,7 +400,6 @@ void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswords
   // dim3 layout(ALPHABET_SIZE, ALPHABET_SIZE, ALPHABET_SIZE);
   size_t blocks = (SEARCH_SPACE_SIZE + PASSWORDS_PER_BLOCK - 1) / PASSWORDS_PER_BLOCK;
   cracker_thread<<<blocks, dim3(26, 26)>>>(GPUpasswords); // Actually run the solver on each thread
-  // cracker_thread<<<blocks, layout>>>(GPUpasswords); // Actually run the solver on each thread
 
   // Wait for all the threads to finish
   if (cudaDeviceSynchronize() != cudaSuccess) {
@@ -426,42 +418,9 @@ void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswords
   cudaFree(PADDING);
 
   for(int i = 0; i < (numBucketsAndMask + 1); i++){
-    if(argsPasswords[i].solved_password[0] != 0){ // Change this to solved when sure it works
-      printf("%s %.*s\n", argsPasswords[i].username, PASSWORD_LENGTH, argsPasswords[i].solved_password);
+    if(argsPasswords[i].solved_password[0] != 0){ 
+      // printf("%s %.*s\n", argsPasswords[i].username, PASSWORD_LENGTH, argsPasswords[i].solved_password);
       send_password_match(host_fd, i, argsPasswords[i].solved_password);
     }
   }
-}
-
-
-/******************** Provided Code ***********************/
-
-/**
- * Convert a string representation of an MD5 hash to a sequence
- * of bytes. The input md5_string must be 32 characters long, and
- * the output buffer bytes must have room for MD5_DIGEST_LENGTH
- * bytes.
- *
- * \param md5_string  The md5 string representation
- * \param bytes       The destination buffer for the converted md5 hash
- * \returns           0 on success, -1 otherwise
- */
-int md5_string_to_bytes(const char* md5_string, uint8_t* bytes) {
-  // Check for a valid MD5 string
-  if(strlen(md5_string) != 2 * MD5_DIGEST_LENGTH) return -1;
-
-  // Start our "cursor" at the start of the string
-  const char* pos = md5_string;
-
-  // Loop until we've read enough bytes
-  for(size_t i=0; i<MD5_DIGEST_LENGTH; i++) {
-    // Read one byte (two characters)
-    int rc = sscanf(pos, "%2hhx", &bytes[i]);
-    if(rc != 1) return -1;
-
-    // Move the "cursor" to the next hexadecimal byte
-    pos += 2;
-  }
-
-  return 0;
 }

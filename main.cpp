@@ -1,3 +1,4 @@
+#include "main.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -11,9 +12,6 @@
 
 #include "cracker-gpu.h"
 #include "tank.h"
-
-
-#define MAX_PLAYERS 32
 
 
 
@@ -100,46 +98,46 @@ void guestMain(char* addr){
     }
     
 
-    //TODO: HANDLE CONNECTION REFUSED
-
     // connect to host
     int host_socket_fd = socket_connect(hostname, port);
     if (host_socket_fd == -1) {
-      perror("Failed to connect");
-      exit(EXIT_FAILURE);
+        printf("Connection failed. Restarting...\n");
+        main(0, NULL); // Just loop them back to main if they didn't connect
     }
-
-    printf("You're connected!\nPlease enter a username so we know who you are: ");
-
+    bool acceptedUsername;
     char username[MAX_USERNAME_LENGTH];
-    scanf("%s", username);
+    printf("You're connected!\nPlease enter a username so we know who you are: ");
+    do{ // Loop until we have a valid username
+        scanf("%s", username);
 
-    // TODO: Check for same username. Or need some unique indentifier in passwords. this is prob not where we'll solve the issue, but just putting a comment here so I don't forget
-
-    bool valid = false;
-    char password[MAX_USERNAME_LENGTH];
-    
-    do{
-        printf("Now choose a 7 character password: "); // Can always have them force lowercase (or lowercase it in background) if an issue
-        // TODO: Force alphanum
-        scanf("%s", password);
-        if(strlen(password) != 7)
-            continue;
-        valid = true;
-        for(int i = 0; i < strlen(password); i++){
-            if(password[i] != tolower(password[i]))
-                valid = false;
+        bool valid = false;
+        char password[MAX_USERNAME_LENGTH];
+        
+        
+        do{
+            printf("Now choose a 7 character password: "); // Can always have them force lowercase (or lowercase it in background) if an issue
+            // TODO: Force alphanum
+            scanf("%s", password);
+            if(strlen(password) != 7)
                 continue;
+            valid = true;
+            for(int i = 0; i < strlen(password); i++){
+                if(password[i] != tolower(password[i]))
+                    valid = false;
+                    continue;
+            }
+        }while(!valid);
+
+        uint8_t passwordHash[MD5_DIGEST_LENGTH];
+        MD5((unsigned char*)password, strlen(password), passwordHash); // Their plaintext password never leaves the local machine
+        
+        send_init(host_socket_fd, username, passwordHash);
+        acceptedUsername = receive_check(host_socket_fd); // Wait to see if the username is unique
+        if(!acceptedUsername){
+            printf("Unfortunately, someone already has that username, please enter a new one: ");
         }
-    }while(!valid);
+    } while(!acceptedUsername);
 
-    uint8_t passwordHash[MD5_DIGEST_LENGTH];
-    MD5((unsigned char*)password, strlen(password), passwordHash);
-    // md5String(password, PASSWORD_LENGTH, passwordHash);
-    
-    send_init(host_socket_fd, username, passwordHash);
-
-    // TODO: consider moving this all to tank.c 
     char * opponentsUsername;
     int opponent_socket_fd;
     start_packet_t* startInfo = receive_start(host_socket_fd);
@@ -208,7 +206,7 @@ void guestMain(char* addr){
 
 
     
-    /** RECIEVE PASSWORDS FROM HOST */
+    /** RECEIVE PASSWORDS FROM HOST */
     password_set_node_t* passwords;
     size_t numPasswordsTot = receive_and_update_password_list(host_socket_fd, &passwords);
    
@@ -259,30 +257,16 @@ typedef struct {
     int server_socket_fd;
 }listen_connect_args_t;
 
-/**
- * This struct is the root of the data structure that will hold users and hashed passwords.
- * There are a number of buckets, and we'll do this in bucket availibity order: if a bucket is full, go to the next one until empty.
- * Instead of trying to be fancy, we just used a mask and a bitwise AND to get a psuedo-random assignment that's also super fast
- */
-// typedef struct password_set {
-//   // Our buckets
-//   struct password_set_node buckets[numBucketsAndMask + 1];
-
-//   // Keeping track of the # of passwords in this set. // Num players will handle this for now
-// //   int numPasswordsTot;
-// } password_set_t;
-
-// Each node in each bucket keeps the username, hash, and references to make deletion faster
-// typedef struct password_set_node {
-//   char username [MAX_USERNAME_LENGTH];
-//   uint8_t hashed_password [MD5_DIGEST_LENGTH];
-// } login_pair_t;
 
 pthread_mutex_t passwordSet_lock = PTHREAD_MUTEX_INITIALIZER;
 int numPlayers;
 password_set_node_t passwords[numBucketsAndMask + 1];
 int numPasswordsTot;
+int numCracked;
 
+start_packet_t* threadExchange[MAX_PLAYERS];
+login_pair_t userList[MAX_PLAYERS];
+pthread_mutex_t userList_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * If we're acting as the host for the game, then everyone will connect to us, 
@@ -302,9 +286,11 @@ int numPasswordsTot;
 */
 void hostMain(char * type){
     for(int i = 0; i < numBucketsAndMask + 1; i++){
-        password_set_node empty;
-        // empty.hashed_password = 0;
         passwords[i].hashed_password[0] = 0;
+    }
+    for(int i = 0; i < MAX_PLAYERS; i++){
+        userList[i].username[0] = 0;
+        userList[i].passwordBuddy = NULL;
     }
 
     // Open up a socket for everyone in the class to connect to 
@@ -319,6 +305,7 @@ void hostMain(char * type){
     
     numPlayers = 0;
     numPasswordsTot = 0;
+    numCracked = 0;
 
 
     if (listen(server_socket_fd, MAX_PLAYERS)) {
@@ -383,7 +370,6 @@ void * listen_connect(void* tempArgs){
     return NULL;
 }
 
-start_packet_t* threadExchange[MAX_PLAYERS];
 
 void * listen_init(void* input_args){
     args_t* args = (args_t*) input_args;
@@ -393,23 +379,60 @@ void * listen_init(void* input_args){
     init_packet_t* info;
     uint8_t* recived_hash;
 
-    // Read a message from the client
-    info = receive_init(client_socket_fd);
-    if (info == NULL){
-        printf("WARNING: Recieved irregular initalization message from client %d with index %d", client_socket_fd, thread_index);
-    }
-    recived_hash = info->passwordHash; // store password from packet 
-    recived_username = info->username; // store username from packet
+    bool valid;
+    do{
+        valid = true;
+        // Read a message from the client
+        info = receive_init(client_socket_fd);
+        if (info == NULL){
+            printf("WARNING: Recieved irregular initalization message from client %d with index %d", client_socket_fd, thread_index);
+        }
+        recived_hash = info->passwordHash; // store password from packet 
+        recived_username = info->username; // store username from packet
+
+        pthread_mutex_lock(&userList_lock);
+        for(int i = 0; i < MAX_PLAYERS; i++){
+            if(strcmp(recived_username, userList[i].username) == 0){
+                send_check(client_socket_fd, false);
+                valid = false;
+                break;
+            }
+        }
+        if(valid){
+            send_check(client_socket_fd, true);
+            memcpy(&(userList[thread_index].hashed_password), recived_hash, MD5_DIGEST_LENGTH);
+            strcpy((userList[thread_index].username), recived_username);
+        }
+        else{
+            free(info);
+        }
+        pthread_mutex_unlock(&userList_lock);
+    } while(!valid);
 
     // We will assume that the password has been verified to meet the criteria on the sending end
+    bool isNew = true;
     pthread_mutex_lock(&passwordSet_lock);
-    int hash_index = (recived_hash[0] & numBucketsAndMask);
-    while(passwords[hash_index].hashed_password[0] != 0){
-        hash_index = (hash_index + 1) % (numBucketsAndMask + 1);
+    for(int i = 0; i < MAX_PLAYERS; i++){ // Can't do this check in the username one cause what if there's an username conflict down the line after a password conflict
+        if(memcmp(recived_hash, userList[i].hashed_password, MD5_DIGEST_LENGTH) == 0 && strcmp(recived_username, userList[i].username) != 0){
+            login_pair_t *pal = &userList[i];
+            while(pal->passwordBuddy != NULL){
+                // pastPal = pal;
+                pal = pal->passwordBuddy;
+            }
+            pal->passwordBuddy = &(userList[thread_index]);
+            isNew = false;
+            break;
+        }
     }
-    memcpy(&(passwords[hash_index].hashed_password), recived_hash, MD5_DIGEST_LENGTH);
-    strcpy((passwords[hash_index].username), recived_username);
-    numPasswordsTot++;
+    if(isNew){
+        int hash_index = (recived_hash[0] & numBucketsAndMask);
+        while(passwords[hash_index].hashed_password[0] != 0){
+            hash_index = (hash_index + 1) % (numBucketsAndMask + 1);
+        }
+        memcpy(&(passwords[hash_index].hashed_password), recived_hash, MD5_DIGEST_LENGTH);
+        strcpy((passwords[hash_index].username), recived_username);
+        numPasswordsTot++;
+    }
     pthread_mutex_unlock(&passwordSet_lock);
 
     printf("\"%s\" (#%d/%d) is signed in and ready to play!\n", recived_username, thread_index + 1, numPlayers);
@@ -420,7 +443,7 @@ void * listen_init(void* input_args){
 
     printf("STARTING!");
     fflush(stdout);
-    // TODO: deadlocks if someone leaves 
+    // ISSUE: deadlocks if someone leaves 
     // TODO: We'll have an array that corresponds to each thread. They can update their values depending on wins and losses and then the next round will go off of that. I'm being lazy by not implementing it rn.
     // Send start to this thread's player
     if((thread_index % 2) == 0){
@@ -441,14 +464,31 @@ void * listen_init(void* input_args){
         send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port, thread_index, numPlayers);
     }
     send_password_list(client_socket_fd, passwords, numPasswordsTot);
-    while(true){
-        receive_and_update_password_match(client_socket_fd, passwords);
-        for(int i = 0; i < (numBucketsAndMask + 1); i++){ // Really inefficient - TODO: Fix
-            if(passwords[i].hashed_password[0] != 0){
-                printf("%s %.*s\n", passwords[i].username, PASSWORD_LENGTH, passwords[i].solved_password);
+    while(numCracked < numPasswordsTot){
+        int numInc = receive_and_update_password_match(client_socket_fd, passwords); // No need to lock since no threads overlap
+        pthread_mutex_lock(&passwordSet_lock);
+        numCracked += numInc;
+        pthread_mutex_unlock(&passwordSet_lock);
+    }
+    for(int i = 0; i < (numBucketsAndMask + 1); i++){ // Copy over the passwords from the password list to the user list for later use
+        if(passwords[i].hashed_password[0] != 0){ 
+            for(int j = 0; j < MAX_PLAYERS; j++){
+                if(strcmp(passwords[i].username, userList[j].username) == 0){
+                    login_pair_t* user = &(userList[j]);
+                    do{
+                        memcpy(user->solvedPassword, passwords[i].solved_password, PASSWORD_LENGTH);
+                        user = user->passwordBuddy;
+                    } while (user != NULL);
+                }
             }
         }
     }
+    for(int i = 0; i < MAX_PLAYERS; i++){
+        if(userList[i].solvedPassword[0] != 0){
+            printf("%s %.*s\n", userList[i].username, PASSWORD_LENGTH, userList[i].solvedPassword);
+        }
+    }
+
 
     return NULL;
 }

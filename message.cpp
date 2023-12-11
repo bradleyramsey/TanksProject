@@ -1,6 +1,7 @@
 #include "message.h"
 #include "cracker-gpu.h"
 #include "tank.h"
+#include "main.h"
 
 #include <errno.h>
 #include <stdint.h>
@@ -420,6 +421,26 @@ int receive_and_update_screen(int fd, int board[][BOARD_WIDTH], int* opponentDir
   return status;
 }
 
+
+int send_check(int fd, bool status){
+  return write(fd, &status, sizeof(bool)) != sizeof(bool);
+}
+
+bool receive_check(int fd){
+  bool status;
+  if (read(fd, &status, sizeof(bool)) != sizeof(bool)) {
+    // Reading failed. Return an error
+    return -1;
+  }
+  return status;
+}
+
+
+
+
+
+
+
 int send_password_list(int fd, const password_set_node_t* passwords, size_t numPasswords) {
 
   size_t bytesToWrite = sizeof(size_t);
@@ -489,7 +510,27 @@ int receive_and_update_password_match(int fd, password_set_node* passwordList){
   }
   char solvedPassword[PASSWORD_LENGTH];
   recv(fd, solvedPassword, PASSWORD_LENGTH, MSG_WAITALL);
+  int updated = 0;
+  if(passwordList[index].solved_password[0] == 0){
+    updated = 1;
+  }
   memcpy(passwordList[index].solved_password, solvedPassword, PASSWORD_LENGTH);
 
-  return 0;
+  return updated;
 }
+
+/*int receive_password_match_and_update_user_list(int fd, login_pair_t* userList){
+  int index;
+  if (read(fd, &index, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return -1;
+  }
+  char solvedPassword[PASSWORD_LENGTH];
+  recv(fd, solvedPassword, PASSWORD_LENGTH, MSG_WAITALL);
+  for(int j = 0; j < MAX_PLAYERS; j++){
+    if(userList[j].hashed_password[0] != 0 & strcmpy(passwords[i].username, userList[j].username))
+  }
+  memcpy(, solvedPassword, PASSWORD_LENGTH);
+
+  return 0;
+}*/
