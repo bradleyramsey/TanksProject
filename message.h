@@ -36,7 +36,6 @@ int send_assignment(int fd, const int* playerNum, const int* partnerPort);
 int send_start(int fd, const int playerNum, char* hostname, int port, int index, int numUsers);
 int send_greeting(int fd, char* username);
 int send_screen(int fd, const int status, const int board [][BOARD_WIDTH]);
-// TODO: Move board width into a header file
 
 // Receive a message from a socket and return the message string (which must be freed later).
 // Returns NULL when an error occurs.

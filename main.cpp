@@ -154,7 +154,7 @@ void guestMain(char* addr){
         
         // Send the info of your new socket back to the host so they can forward it to your opponent
         char our_hostname[64];
-        gethostname(our_hostname, 64); //TODO: Check if need to truncate hostname (i.e. remove .cs.grinnell.edu)
+        gethostname(our_hostname, 64); 
         send_start(host_socket_fd, 2, our_hostname, our_port, 0, 0); // Doesn't matter that these are 0s since we're sending to the host and it will overwrite before sending to the other client
 
         // Start listening for a connection
@@ -208,39 +208,10 @@ void guestMain(char* addr){
 
 
     
-    /** TODO: RECIEVE PASSWORDS FROM HOST */
-
+    /** RECIEVE PASSWORDS FROM HOST */
     password_set_node_t* passwords;
     size_t numPasswordsTot = receive_and_update_password_list(host_socket_fd, &passwords);
-    // FILE* password_file = NULL;
-    // Read until we hit the end of the file
-    // while(false){//!feof(password_file)) {
-    //     // Make space to hold the username
-    //     char username[MAX_USERNAME_LENGTH];
-
-    //     // Make space to hold the MD5 string
-    //     char md5_string[MD5_DIGEST_LENGTH * 2 + 1];
-
-    //     // Make space to hold the MD5 bytes
-    //     uint8_t password_hash[MD5_DIGEST_LENGTH];
-
-    //     // Try to read. The space in the format string is required to eat the newline
-    //     if(fscanf(password_file, "%s %s ", username, md5_string) != 2) {
-    //     fprintf(stderr, "Error reading password file: malformed line\n");
-    //     exit(2);
-    //     }
-
-    //     // Convert the MD5 string to MD5 bytes in our new node
-    //     if(md5_string_to_bytes(md5_string, password_hash) != 0) {
-    //     fprintf(stderr, "Error reading MD5\n");
-    //     exit(2);
-    //     }
-
-    //     // Add the password to the password set
-    //     // add_password(&passwords, username, password_hash);
-    //     add_password_array(&passwords, username, password_hash);
-    
-    // }
+   
     // Now run the password list cracker
     crack_password_list_num(passwords, numPasswordsTot, startInfo->playerNum, startInfo->numUsers);
     
@@ -370,9 +341,6 @@ void hostMain(char * type){
         // TODO: Add a check and confimation if # players != num passwords - means someone's not done checking in 
     }
 
-    /** TODO: Do the opponent assignments. Probably just have each thread check if it's odd or even. 
-     *  Have one initate the process and then pass it off, or just do the whole thing, idk.*/
-
     GameState = 1;
     
     pthread_join(listen_connect_thread, NULL);
@@ -386,9 +354,7 @@ void * listen_connect(void* tempArgs){
     pthread_t listen_threads [MAX_PLAYERS];
     args_t listen_args [MAX_PLAYERS];
 
-    while (numPlayers < MAX_PLAYERS){
-        // userInput = getchar(); // TODO: ACTUALLY GET OUT OF THE LOOP
-        // TODO: Add new thread for listening and keep this thread as waiting for user input
+    while (true){
         fflush(stdout);
         // Wait for a client to connect
         int client_socket_fd = server_socket_accept(args->server_socket_fd);

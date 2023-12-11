@@ -25,7 +25,7 @@
 
 
 
-// TODO: Handle loss on other size
+// TODO: Handle loss on other side
 
 
 /**
@@ -711,9 +711,6 @@ void * tankMain(void * temp_args)
   // task_t update_apples_task;
   // task_t generate_apple_task;
   // task_t update_weapon_task;
-
-  // Initialize the scheduler library
-  scheduler_init();
 
   // Create tasks for each task in the game
   task_create(&draw_board_task, draw_board);

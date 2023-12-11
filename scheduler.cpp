@@ -90,15 +90,6 @@ task_t findReadyTask(task_t curTask){
 }
 
 
-/**
- * Initialize the scheduler. Programs should call this before calling any other
- * functions in this file.
- */
-void scheduler_init() {
-  // TODO: Initialize the state of the scheduler
-
-  // No
-}
 
 /**
  * This function will execute when a task's function returns. This allows you
