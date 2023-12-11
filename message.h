@@ -20,6 +20,8 @@ typedef struct {
   int playerNum;
   char* hostname;
   int port;
+  int index;
+  int numUsers;
 } start_packet_t;
 
 typedef struct {
@@ -31,7 +33,7 @@ typedef struct {
 // an error occurs.
 int send_init(int fd, const char* username, const uint8_t* passwordHash);
 int send_assignment(int fd, const int* playerNum, const int* partnerPort);
-int send_start(int fd, const int playerNum, char* hostname, int port);
+int send_start(int fd, const int playerNum, char* hostname, int port, int index, int numUsers);
 int send_greeting(int fd, char* username);
 int send_screen(int fd, const int status, const int board [][BOARD_WIDTH]);
 // TODO: Move board width into a header file

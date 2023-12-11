@@ -155,7 +155,7 @@ void guestMain(char* addr){
         // Send the info of your new socket back to the host so they can forward it to your opponent
         char our_hostname[64];
         gethostname(our_hostname, 64); //TODO: Check if need to truncate hostname (i.e. remove .cs.grinnell.edu)
-        send_start(host_socket_fd, 2, our_hostname, our_port);
+        send_start(host_socket_fd, 2, our_hostname, our_port, 0, 0); // Doesn't matter that these are 0s since we're sending to the host and it will overwrite before sending to the other client
 
         // Start listening for a connection
         if (listen(server_socket_fd, MAX_PLAYERS)) {
@@ -242,7 +242,7 @@ void guestMain(char* addr){
     
     // }
     // Now run the password list cracker
-    crack_password_list_num(passwords, numPasswordsTot);
+    crack_password_list_num(passwords, numPasswordsTot, startInfo->playerNum, startInfo->numUsers);
     
 
     pthread_join(tankThread, NULL);
@@ -464,7 +464,7 @@ void * listen_init(void* input_args){
             
         }
         else{
-            send_start(client_socket_fd, 1, NULL, 0);
+            send_start(client_socket_fd, 1, NULL, 0, thread_index, numPlayers);
             start_packet_t* info = receive_start(client_socket_fd);
             threadExchange[thread_index + 1] = info; // Communicate between clients
             // threadExchange[thread_index] = info; // I just have a feeling we'll need this later
@@ -472,7 +472,7 @@ void * listen_init(void* input_args){
     }
     else{
         while(threadExchange[thread_index] == NULL){sleep(0.5);}
-        send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port);
+        send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port, thread_index, numPlayers);
     }
     send_password_list(client_socket_fd, passwords, numPasswordsTot);
     while(true){sleep(1);};

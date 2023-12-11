@@ -287,6 +287,8 @@ void usrnmcpy(char * from, char * to){
 
 
 __constant__ int numPasswordsGPU;
+__constant__ int numUsersGPU;
+__constant__ int offsetGPU;
 int numPasswords;
 
 
@@ -333,6 +335,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
 
   // Same as the individual thread, but now we have each start on offset, and inc by the # of threads
   char candidate_passwd[] = "aaaaaaa";
+  candidate_passwd[0]+= offsetGPU;
   candidate_passwd[2]+= threadIdx.x;
   candidate_passwd[3]+= threadIdx.y;
   // candidate_passwd[2]+= threadIdx.z;
@@ -371,7 +374,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
       //   // if(memcmp(candidate_hash, &(passwords[i].hashed_password), MD5_DIGEST_LENGTH) == 0) {
         
       // }
-      candidate_passwd[0]++;
+      candidate_passwd[0] += numUsersGPU;
     }
     candidate_passwd[0] = 'a';
     candidate_passwd[1]++;
@@ -387,7 +390,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
  *
  * \returns The number of passwords cracked in the list
  */
-void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPasswordsArg) {
+void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers) {
   // Change the buffer so we don't waste time on constant system calls and context switches
   // char buffer[2048];
   // setvbuf(stdout, buffer, _IOFBF, 2048);
@@ -408,10 +411,15 @@ void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPassw
     fprintf(stderr, "Failed to copy S to the GPU\n");
   }
 
-  // if (cudaMemcpyToSymbol(numPasswordsGPU, &numPasswords, sizeof(int), 0, cudaMemcpyHostToDevice) !=
-  //     cudaSuccess) {
-  //   fprintf(stderr, "Failed to copy numPasswords to the GPU\n");
-  // }
+  if (cudaMemcpyToSymbol(numUsersGPU, &numUsers, sizeof(int), 0, cudaMemcpyHostToDevice) !=
+      cudaSuccess) {
+    fprintf(stderr, "Failed to copy numUsers to the GPU\n");
+  }
+
+  if (cudaMemcpyToSymbol(offsetGPU, &index, sizeof(int), 0, cudaMemcpyHostToDevice) !=
+      cudaSuccess) {
+    fprintf(stderr, "Failed to copy index to the GPU\n");
+  }
 
   if (cudaMemcpyToSymbol(PADDING, cpuPADDING, sizeof(uint8_t) * 64, 0, cudaMemcpyHostToDevice) !=
       cudaSuccess) {
@@ -464,7 +472,7 @@ void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPassw
 
 
 void crack_password_list(password_set_node_t* passwords) {
-  crack_password_list_num(passwords, 256);
+  crack_password_list_num(passwords, 256, 1, 1);
 }
 
 /******************** Provided Code ***********************/

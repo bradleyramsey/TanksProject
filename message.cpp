@@ -125,7 +125,7 @@ init_packet_t* receive_init(int fd) {
 
 
 // Send a across a socket with a header that includes the message length.
-int send_start(int fd, const int playerNum, char* hostname, int port) {
+int send_start(int fd, const int playerNum, char* hostname, int port, int index, int numUsers) {
   // If the message is NULL, set errno to EINVAL and return an error
   if (playerNum != 1 && playerNum != 2) {
     errno = EINVAL;
@@ -164,8 +164,20 @@ int send_start(int fd, const int playerNum, char* hostname, int port) {
     bytes_written += rc;
   }
 
-  // Lastly, we need to send the port so that player 2 knows what to connect to.
+  // We need to send the port so that player 2 knows what to connect to.
   if (write(fd, &port, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+
+  // We also need to send index of the user so they can calculate their offset.
+  if (write(fd, &index, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+
+    // Lastly, we need to send the total number of users so they can calculate their increment.
+  if (write(fd, &numUsers, sizeof(int)) != sizeof(int)) {
     // Writing failed, so return an error
     return -1;
   }
@@ -234,6 +246,23 @@ start_packet_t* receive_start(int fd) {
     return NULL;
   }
   received_info->port = port;
+
+
+  //And read the index
+  int index;
+  if (read(fd, &index, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return NULL;
+  }
+  received_info->index = index;
+
+  //And read the index
+  int numUsers;
+  if (read(fd, &numUsers, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return NULL;
+  }
+  received_info->numUsers = numUsers;
 
   return received_info;
 }
