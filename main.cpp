@@ -213,7 +213,7 @@ void guestMain(char* addr){
     size_t numPasswordsTot = receive_and_update_password_list(host_socket_fd, &passwords);
    
     // Now run the password list cracker
-    crack_password_list_num(passwords, numPasswordsTot, startInfo->playerNum, startInfo->numUsers, host_socket_fd);
+    crack_password_list(passwords, numPasswordsTot, startInfo->playerNum, startInfo->numUsers, host_socket_fd);
     
 
     pthread_join(tankThread, NULL);

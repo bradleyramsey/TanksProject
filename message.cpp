@@ -473,6 +473,8 @@ int send_password_match(int fd, int index, char* password){
     // Writing failed, so return an error
     return -1;
   }
+
+  return 0;
 }
 
 

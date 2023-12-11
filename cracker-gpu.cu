@@ -1,5 +1,6 @@
 // #define _GNU_SOURCE
 #include "cracker-gpu.h"
+#include "message.h"
 
 #include <openssl/md5.h>
 #include <stdint.h>
@@ -390,7 +391,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
  *
  * \returns The number of passwords cracked in the list
  */
-void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd) {
+void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd) {
   // Change the buffer so we don't waste time on constant system calls and context switches
   // char buffer[2048];
   // setvbuf(stdout, buffer, _IOFBF, 2048);
@@ -471,10 +472,6 @@ void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPassw
   }
 }
 
-
-void crack_password_list(password_set_node_t* passwords) {
-  crack_password_list_num(passwords, 256, 1, 1);
-}
 
 /******************** Provided Code ***********************/
 

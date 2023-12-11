@@ -33,8 +33,6 @@ typedef struct password_set_node {
 
 int md5_string_to_bytes(const char* md5_string, uint8_t* bytes);
 
-void crack_password_list(password_set_node_t* passwords);
-
-void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd);
+void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd);
 
 #endif
