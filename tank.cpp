@@ -24,10 +24,6 @@
 #define PLAYER_2 2
 
 
-
-// TODO: Handle loss on other side
-
-
 /**
  * In-memory representation of the game board
  * Zero represents an empty cell
@@ -121,7 +117,7 @@ void init_display()
 void end_game()
 {
   mvprintw(screen_row(BOARD_HEIGHT / 2) + 1, screen_col(BOARD_WIDTH / 2) - 6, "            ");
-  mvprintw(screen_row(BOARD_HEIGHT / 2), screen_col(BOARD_WIDTH / 2) - 6, "Player 1 Wins!"); 
+  mvprintw(screen_row(BOARD_HEIGHT / 2), screen_col(BOARD_WIDTH / 2) - 6, "Player 1 Wins!");  //TODO: Print the winner's name here
   mvprintw(screen_row(BOARD_HEIGHT / 2) + 1, screen_col(BOARD_WIDTH / 2) - 6, "            ");
   mvprintw(screen_row(BOARD_HEIGHT / 2) + 2, screen_col(BOARD_WIDTH / 2) - 11,
            "Press any key to exit.");
@@ -514,7 +510,12 @@ void update_tank()
   int weapon_dir = DIR_NORTH;
   while (running)
   {
-    receive_and_update_screen(partner_fd, board, &opponent_dir);
+    int status = receive_and_update_screen(partner_fd, board, &opponent_dir);
+    if(status != 1){
+      running = false;
+      ungetch(0);
+      p1_winner = (status == 2); // We're ignoring that -1 is also an option here.
+    }
     if (player_num == 1){
       tank_dir = updated_tank_dir_p1;
       tank_dir_p1 = updated_tank_dir_p1;
@@ -707,9 +708,11 @@ void * tankMain(void * temp_args)
 
   // Display the end of game message and wait for user input
   if (p1_winner){
+    send_screen(partner_fd, 2, board, tank_dir_p2);
     end_game();
   }
   else{
+    send_screen(partner_fd, 3, board, tank_dir_p1);
     end_game_p2();
   }
 

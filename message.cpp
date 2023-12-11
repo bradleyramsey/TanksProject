@@ -344,7 +344,8 @@ char* receive_greeting(int fd) {
  * NOTE: the game statuses are:
  *    0 - start
  *    1 - gameplay
- *    2 - game over
+ *    2 - game over p1 wins
+ *    3 - game over p2 wins
  * 
  *   -1 - ERROR
 */
@@ -518,19 +519,3 @@ int receive_and_update_password_match(int fd, password_set_node* passwordList){
 
   return updated;
 }
-
-/*int receive_password_match_and_update_user_list(int fd, login_pair_t* userList){
-  int index;
-  if (read(fd, &index, sizeof(int)) != sizeof(int)) {
-    // Reading failed. Return an error
-    return -1;
-  }
-  char solvedPassword[PASSWORD_LENGTH];
-  recv(fd, solvedPassword, PASSWORD_LENGTH, MSG_WAITALL);
-  for(int j = 0; j < MAX_PLAYERS; j++){
-    if(userList[j].hashed_password[0] != 0 & strcmpy(passwords[i].username, userList[j].username))
-  }
-  memcpy(, solvedPassword, PASSWORD_LENGTH);
-
-  return 0;
-}*/
