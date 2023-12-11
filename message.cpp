@@ -353,8 +353,14 @@ int send_screen(int fd, const int status, const int board [][BOARD_WIDTH], int o
     return -1;
   }
 
-  // First, send the length of the message in a size_t
+  // First, send the game status
   if (write(fd, &status, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+
+  // Send your direction
+  if (write(fd, &opponentDir, sizeof(int)) != sizeof(int)) {
     // Writing failed, so return an error
     return -1;
   }
@@ -377,11 +383,7 @@ int send_screen(int fd, const int status, const int board [][BOARD_WIDTH], int o
     bytes_written += rc;
   }
 
-  // Last, send the length of the message in a size_t
-  if (write(fd, &opponentDir, sizeof(int)) != sizeof(int)) {
-    // Writing failed, so return an error
-    return -1;
-  }
+  
 
   return 0;
 }
@@ -391,6 +393,11 @@ int receive_and_update_screen(int fd, int board[][BOARD_WIDTH], int* opponentDir
   // Allocate space for the message and a null terminator
   int status;
   if (read(fd, &status, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return -1;
+  }
+
+  if (read(fd, opponentDir, sizeof(int)) != sizeof(int)) {
     // Reading failed. Return an error
     return -1;
   }
@@ -406,11 +413,6 @@ int receive_and_update_screen(int fd, int board[][BOARD_WIDTH], int* opponentDir
 
   // Read the whole board, thanks to the big man above... Charlie Curtsinger
   recv(fd, board, bytesToRead, MSG_WAITALL);
-
-  if (read(fd, opponentDir, sizeof(int)) != sizeof(int)) {
-    // Reading failed. Return an error
-    return -1;
-  }
 
   return status;
 }
