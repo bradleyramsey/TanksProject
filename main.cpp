@@ -138,72 +138,82 @@ void guestMain(char* addr){
         }
     } while(!acceptedUsername);
 
+    pthread_t tankThread;
+
     char * opponentsUsername;
     int opponent_socket_fd;
     start_packet_t* startInfo = receive_start(host_socket_fd);
-    if(startInfo->playerNum == 1){
-        // Start a listening socket for your opponent
-        unsigned short our_port = 0;
-        int server_socket_fd = server_socket_open(&our_port);
-        if (server_socket_fd == -1) {
-            perror("Server socket was not opened");
-            exit(EXIT_FAILURE);
-        }
-        
-        // Send the info of your new socket back to the host so they can forward it to your opponent
-        char our_hostname[64];
-        gethostname(our_hostname, 64); 
-        send_start(host_socket_fd, 2, our_hostname, our_port, 0, 0); // Doesn't matter that these are 0s since we're sending to the host and it will overwrite before sending to the other client
+    if(startInfo->playerNum == 1 || startInfo->playerNum == 2){
+        if(startInfo->playerNum == 1){
+            // Start a listening socket for your opponent
+            unsigned short our_port = 0;
+            int server_socket_fd = server_socket_open(&our_port);
+            if (server_socket_fd == -1) {
+                perror("Server socket was not opened");
+                exit(EXIT_FAILURE);
+            }
+            
+            // Send the info of your new socket back to the host so they can forward it to your opponent
+            char our_hostname[64];
+            gethostname(our_hostname, 64); 
+            send_start(host_socket_fd, 2, our_hostname, our_port, 0, 0); // Doesn't matter that these are 0s since we're sending to the host and it will overwrite before sending to the other client
 
-        // Start listening for a connection
-        if (listen(server_socket_fd, MAX_PLAYERS)) {
-            perror("listen failed");
-            exit(EXIT_FAILURE);
-        }
+            // Start listening for a connection
+            if (listen(server_socket_fd, MAX_PLAYERS)) {
+                perror("listen failed");
+                exit(EXIT_FAILURE);
+            }
 
-        opponent_socket_fd = server_socket_accept(server_socket_fd);
-        // check if client socket is not connected
-        if (opponent_socket_fd == -1) {
-            perror("accept failed");
-            exit(EXIT_FAILURE);
-        }
-        // printf("Ready to play! Starting game!\n");
+            opponent_socket_fd = server_socket_accept(server_socket_fd);
+            // check if client socket is not connected
+            if (opponent_socket_fd == -1) {
+                perror("accept failed");
+                exit(EXIT_FAILURE);
+            }
+            // printf("Ready to play! Starting game!\n");
 
-        // Once they connect, exchange greetings and then send the starting board
-        send_greeting(opponent_socket_fd, username);
-        opponentsUsername = receive_greeting(opponent_socket_fd);
-        printf("You're battling %s, Get ready!", opponentsUsername);
+            // Once they connect, exchange greetings and then send the starting board
+            send_greeting(opponent_socket_fd, username);
+            opponentsUsername = receive_greeting(opponent_socket_fd);
+            printf("You're battling %s, Get ready!", opponentsUsername);
+        }
+        else{
+            // Connect to the provided socket
+            opponent_socket_fd = socket_connect(startInfo->hostname, startInfo->port);
+            if (opponent_socket_fd == -1) {
+                perror("Failed to connect");
+                exit(EXIT_FAILURE);
+            }
+            // printf("You're connected to your opponent!\n");
+
+            // Exchange greetings and start listening for the first board state
+            opponentsUsername = receive_greeting(opponent_socket_fd);
+            send_greeting(opponent_socket_fd, username);
+
+            printf("You're battling %s, Get ready!\n", opponentsUsername);
+            
+            sleep(.5);
+        }
+        fflush(stdout);
+
+        tank_main_args_t* tankArgs = (tank_main_args_t*) malloc(sizeof(tank_main_args_t));
+
+        tankArgs->player_num = startInfo->playerNum;
+        tankArgs->partner_fd = opponent_socket_fd;
+
+        if (pthread_create(&tankThread, NULL, &tankMain, (void*) tankArgs)) {
+            perror("pthread_create failed");
+            exit(2);
+        }
+    }
+    else if(startInfo->playerNum == 0){
+        printf("You're the odd player out, please wait for the next round");
+        fflush(stdout);
     }
     else{
-        // Connect to the provided socket
-        opponent_socket_fd = socket_connect(startInfo->hostname, startInfo->port);
-        if (opponent_socket_fd == -1) {
-            perror("Failed to connect");
-            exit(EXIT_FAILURE);
-        }
-        // printf("You're connected to your opponent!\n");
-
-        // Exchange greetings and start listening for the first board state
-        opponentsUsername = receive_greeting(opponent_socket_fd);
-        send_greeting(opponent_socket_fd, username);
-
-        printf("You're battling %s, Get ready!\n", opponentsUsername);
-        
-        sleep(.5);
+        perror("Hmmm something fucked up");
     }
-    fflush(stdout);
-
-    tank_main_args_t* tankArgs = (tank_main_args_t*) malloc(sizeof(tank_main_args_t));
-
-    tankArgs->player_num = startInfo->playerNum;
-    tankArgs->partner_fd = opponent_socket_fd;
-
-    pthread_t tankThread;
-    if (pthread_create(&tankThread, NULL, &tankMain, (void*) tankArgs)) {
-        perror("pthread_create failed");
-        exit(2);
-    }
-
+    
 
     
     /** RECEIVE PASSWORDS FROM HOST */
@@ -448,8 +458,7 @@ void * listen_init(void* input_args){
     // Send start to this thread's player
     if((thread_index % 2) == 0){
         if(thread_index == numPlayers - 1){ // IDK if this will work - might not have the scope
-            // send_start(client_socket_fd, 1, NULL, 0); // TODO: Send start so they print this
-            printf("You're the odd player out, please wait for the next round");
+            send_start(client_socket_fd, 0, NULL, 0, thread_index, numPlayers); // TODO: Send start so they print this  
             
         }
         else{

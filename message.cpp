@@ -128,10 +128,10 @@ init_packet_t* receive_init(int fd) {
 // Send a across a socket with a header that includes the message length.
 int send_start(int fd, const int playerNum, char* hostname, int port, int index, int numUsers) {
   // If the message is NULL, set errno to EINVAL and return an error
-  if (playerNum != 1 && playerNum != 2) {
-    errno = EINVAL;
-    return -1;
-  }
+  // if (playerNum != 1 && playerNum != 2) {
+  //   errno = EINVAL;
+  //   return -1;
+  // }
 
   
   // We need to send the player num either
@@ -153,7 +153,7 @@ int send_start(int fd, const int playerNum, char* hostname, int port, int index,
   }
 
   // But if we're sending to player 1, we don't have the port yet, so we'll just have them spin up their socket
-  if(playerNum == 1){
+  if(playerNum == 1 || playerNum == 0){
     return 0;
   }
 
@@ -215,7 +215,7 @@ start_packet_t* receive_start(int fd) {
   received_info->numUsers = numUsers;
 
   // Now see if we're player 1 or if we need to keep trying to read this message
-  if (playerNum == 1) {
+  if (playerNum == 1 || playerNum == 0) {
     received_info->hostname = NULL;
     received_info->port = 0;
     return received_info;
