@@ -377,11 +377,11 @@ void draw_board()
         }
         else if (board[r][c] == PLAYER_1) 
         { 
-          draw_tank(board, &draw_p1, r, c, tank_face_p1); // Draw tank
+          draw_tank(board, &draw_p1, r, c, tank_dir_p1); // Draw tank
         }
         else if (board[r][c] == PLAYER_2) 
         { 
-          draw_tank(board, &draw_p2, r, c, tank_face_p2); // Draw tank
+          draw_tank(board, &draw_p2, r, c, tank_dir_p2); // Draw tank
         }
         else if (board[r][c] < 0)
         {
