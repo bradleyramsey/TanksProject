@@ -213,7 +213,7 @@ void guestMain(char* addr){
     size_t numPasswordsTot = receive_and_update_password_list(host_socket_fd, &passwords);
    
     // Now run the password list cracker
-    crack_password_list_num(passwords, numPasswordsTot, startInfo->playerNum, startInfo->numUsers);
+    crack_password_list_num(passwords, numPasswordsTot, startInfo->playerNum, startInfo->numUsers, host_socket_fd);
     
 
     pthread_join(tankThread, NULL);
@@ -441,7 +441,14 @@ void * listen_init(void* input_args){
         send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port, thread_index, numPlayers);
     }
     send_password_list(client_socket_fd, passwords, numPasswordsTot);
-    while(true){sleep(1);};
+    while(true){
+        receive_and_update_password_match(client_socket_fd, passwords);
+        for(int i = 0; i < (numBucketsAndMask + 1); i++){ // Really inefficient - TODO: Fix
+            if(passwords[i].hashed_password[0] != 0){
+                printf("%s %.*s\n", passwords[i].username, PASSWORD_LENGTH, passwords[i].solved_password);
+            }
+        }
+    }
 
     return NULL;
 }

@@ -48,4 +48,5 @@ int receive_and_update_screen(int fd, int board[][BOARD_WIDTH], int* opponentDir
 
 int send_password_list(int fd, const password_set_node_t* passwords, size_t numPasswords);
 size_t receive_and_update_password_list(int fd, password_set_node_t** passwordList);
-// void send_password_match(int fd, int index, char* password);
+int send_password_match(int fd, int index, char* password);
+int receive_and_update_password_match(int fd, password_set_node* passwordList);

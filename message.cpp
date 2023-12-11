@@ -460,3 +460,31 @@ size_t receive_and_update_password_list(int fd, password_set_node_t** passwordLi
   *passwordList = received_list;
   return numPasswords;
 }
+
+
+
+int send_password_match(int fd, int index, char* password){
+  if (write(fd, &index, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+
+  if (write(fd, password, sizeof(char) * PASSWORD_LENGTH) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+}
+
+
+int receive_and_update_password_match(int fd, password_set_node* passwordList){
+  int index;
+  if (read(fd, &index, sizeof(size_t)) != sizeof(size_t)) {
+    // Reading failed. Return an error
+    return -1;
+  }
+  char solvedPassword[PASSWORD_LENGTH];
+  recv(fd, solvedPassword, PASSWORD_LENGTH, MSG_WAITALL);
+  memcpy(passwordList[index].solved_password, solvedPassword, PASSWORD_LENGTH);
+
+  return 0;
+}

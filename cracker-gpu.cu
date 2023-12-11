@@ -390,7 +390,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
  *
  * \returns The number of passwords cracked in the list
  */
-void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers) {
+void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd) {
   // Change the buffer so we don't waste time on constant system calls and context switches
   // char buffer[2048];
   // setvbuf(stdout, buffer, _IOFBF, 2048);
@@ -463,10 +463,10 @@ void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPassw
   cudaFree(S);
   cudaFree(PADDING);
 
-  // TODO: Send to host
   for(int i = 0; i < (numBucketsAndMask + 1); i++){
-    if(argsPasswords[i].hashed_password[0] != 0){
+    if(argsPasswords[i].hashed_password[0] != 0){ // Change this to solved when sure it works
       printf("%s %.*s\n", argsPasswords[i].username, PASSWORD_LENGTH, argsPasswords[i].solved_password);
+      send_password_match(host_fd, i, argsPasswords[i].solved_password);
     }
   }
 }
