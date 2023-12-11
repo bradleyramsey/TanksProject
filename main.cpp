@@ -218,10 +218,10 @@ void guestMain(char* addr){
     
     /** RECEIVE PASSWORDS FROM HOST */
     password_set_node_t* passwords;
-    size_t numPasswordsTot = receive_and_update_password_list(host_socket_fd, &passwords);
+    size_t numPasswordsToCrack = receive_and_update_password_list(host_socket_fd, &passwords);
    
     // Now run the password list cracker
-    crack_password_list(passwords, numPasswordsTot, startInfo->index, startInfo->numUsers, host_socket_fd);
+    crack_password_list(passwords, numPasswordsToCrack, startInfo->index, startInfo->numUsers, host_socket_fd);
     
 
     pthread_join(tankThread, NULL);
@@ -272,6 +272,7 @@ pthread_mutex_t passwordSet_lock = PTHREAD_MUTEX_INITIALIZER;
 int numPlayers;
 password_set_node_t passwords[numBucketsAndMask + 1];
 int numPasswordsTot;
+size_t numPasswordsUnique;
 int numCracked;
 
 start_packet_t* threadExchange[MAX_PLAYERS];
@@ -315,6 +316,7 @@ void hostMain(char * type){
     
     numPlayers = 0;
     numPasswordsTot = 0;
+    numPasswordsUnique = 0;
     numCracked = 0;
 
 
@@ -335,7 +337,21 @@ void hostMain(char * type){
     char userInput = '\0';
     while(userInput != 's'){
         userInput = getchar();
-        // TODO: Add a check and confimation if # players != num passwords - means someone's not done checking in 
+        
+        // Check that # players == num passwords - if not, it probably means someone's not done checking in 
+        if(userInput == 's' && numPlayers != numPasswordsTot){
+            printf("It looks like not everyone is logged in fully. Are you sure you want to start? (s to start) ");
+
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) { } // Clear stdin. From: https://stackoverflow.com/questions/7898215/how-can-i-clear-an-input-buffer-in-c
+
+            userInput = getchar();
+            if(userInput != 's'){
+                printf("Waiting\n");
+            }
+
+            while ((c = getchar()) != '\n' && c != EOF) { } // Clear stdin
+        }
     }
 
     GameState = 1;
@@ -441,8 +457,9 @@ void * listen_init(void* input_args){
         }
         memcpy(&(passwords[hash_index].hashed_password), recived_hash, MD5_DIGEST_LENGTH);
         strcpy((passwords[hash_index].username), recived_username);
-        numPasswordsTot++;
+        numPasswordsUnique++;
     }
+    numPasswordsTot++;
     pthread_mutex_unlock(&passwordSet_lock);
 
     printf("\"%s\" (#%d/%d) is signed in and ready to play!\n", recived_username, thread_index + 1, numPlayers);
@@ -457,9 +474,8 @@ void * listen_init(void* input_args){
     // TODO: We'll have an array that corresponds to each thread. They can update their values depending on wins and losses and then the next round will go off of that. I'm being lazy by not implementing it rn.
     // Send start to this thread's player
     if((thread_index % 2) == 0){
-        if(thread_index == numPlayers - 1){ // IDK if this will work - might not have the scope
-            send_start(client_socket_fd, 0, NULL, 0, thread_index, numPlayers); // TODO: Send start so they print this  
-            
+        if(thread_index == numPlayers - 1){ 
+            send_start(client_socket_fd, 0, NULL, 0, thread_index, numPlayers);
         }
         else{
             send_start(client_socket_fd, 1, NULL, 0, thread_index, numPlayers);
@@ -472,8 +488,8 @@ void * listen_init(void* input_args){
         while(threadExchange[thread_index] == NULL){sleep(0.5);}
         send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port, thread_index, numPlayers);
     }
-    send_password_list(client_socket_fd, passwords, numPasswordsTot);
-    while(numCracked < numPasswordsTot){
+    send_password_list(client_socket_fd, passwords, numPasswordsUnique);
+    while(numCracked < numPasswordsUnique){
         int numInc = receive_and_update_password_match(client_socket_fd, passwords); // No need to lock since no threads overlap
         pthread_mutex_lock(&passwordSet_lock);
         numCracked += numInc;
