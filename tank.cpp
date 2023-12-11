@@ -217,12 +217,17 @@ void tank_right(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_c
 {
   if (tank_center_col + 2 < BOARD_WIDTH)
   {
-    board[tank_center_row][tank_center_col + 2] = player_num;
-    board[tank_center_row - 1][tank_center_col + 2] = player_num;
-    board[tank_center_row + 1][tank_center_col + 2] = player_num;
-    board[tank_center_row][tank_center_col - 1] = 0;
-    board[tank_center_row - 1][tank_center_col - 1] = 0;
-    board[tank_center_row + 1][tank_center_col - 1] = 0;
+    if (board[tank_center_row][tank_center_col +2] < 1 &&
+        board[tank_center_row + 1][tank_center_col + 2] < 1 && 
+        board[tank_center_row - 1][tank_center_col + 2] < 1)
+    {
+      board[tank_center_row][tank_center_col + 2] = player_num;
+      board[tank_center_row - 1][tank_center_col + 2] = player_num;
+      board[tank_center_row + 1][tank_center_col + 2] = player_num;
+      board[tank_center_row][tank_center_col - 1] = 0;
+      board[tank_center_row - 1][tank_center_col - 1] = 0;
+      board[tank_center_row + 1][tank_center_col - 1] = 0;
+    }
   }
 }
 /**
@@ -232,12 +237,17 @@ void tank_left(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_co
 {
   if (tank_center_col - 2 > 0)
   {
-    board[tank_center_row][tank_center_col - 2] = player_num;
-    board[tank_center_row - 1][tank_center_col - 2] = player_num;
-    board[tank_center_row + 1][tank_center_col - 2] = player_num;
-    board[tank_center_row][tank_center_col + 1] = 0;
-    board[tank_center_row - 1][tank_center_col + 1] = 0;
-    board[tank_center_row + 1][tank_center_col + 1] = 0;
+    if (board[tank_center_row][tank_center_col -2] < 1 &&
+        board[tank_center_row + 1][tank_center_col - 2] < 1 &&
+        board[tank_center_row - 1][tank_center_col - 2] < 1)
+    {
+      board[tank_center_row][tank_center_col - 2] = player_num;
+      board[tank_center_row - 1][tank_center_col - 2] = player_num;
+      board[tank_center_row + 1][tank_center_col - 2] = player_num;
+      board[tank_center_row][tank_center_col + 1] = 0;
+      board[tank_center_row - 1][tank_center_col + 1] = 0;
+      board[tank_center_row + 1][tank_center_col + 1] = 0;
+    }
   }
 }
 
@@ -248,12 +258,17 @@ void tank_up(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
   if (tank_center_row - 2 >= 0)
   {
-    board[tank_center_row - 2][tank_center_col] = player_num;
-    board[tank_center_row - 2][tank_center_col - 1] = player_num;
-    board[tank_center_row - 2][tank_center_col + 1] = player_num;
-    board[tank_center_row + 1][tank_center_col] = 0;
-    board[tank_center_row + 1][tank_center_col - 1] = 0;
-    board[tank_center_row + 1][tank_center_col + 1] = 0;
+    if (board[tank_center_row - 2][tank_center_col] < 1 &&
+        board[tank_center_row - 2][tank_center_col + 1] < 1 && 
+        board[tank_center_row - 2][tank_center_col-1] < 1)
+    {
+      board[tank_center_row - 2][tank_center_col] = player_num;
+      board[tank_center_row - 2][tank_center_col - 1] = player_num;
+      board[tank_center_row - 2][tank_center_col + 1] = player_num;
+      board[tank_center_row + 1][tank_center_col] = 0;
+      board[tank_center_row + 1][tank_center_col - 1] = 0;
+      board[tank_center_row + 1][tank_center_col + 1] = 0;
+    }
   }
 }
 
@@ -264,12 +279,17 @@ void tank_down(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_co
 {
   if (tank_center_row + 2 < BOARD_HEIGHT)
   {
-    board[tank_center_row + 2][tank_center_col] = player_num;
-    board[tank_center_row + 2][tank_center_col - 1] = player_num;
-    board[tank_center_row + 2][tank_center_col + 1] = player_num;
-    board[tank_center_row - 1][tank_center_col] = 0;
-    board[tank_center_row - 1][tank_center_col - 1] = 0;
-    board[tank_center_row - 1][tank_center_col + 1] = 0;
+    if (board[tank_center_row + 2][tank_center_col] < 1 &&
+        board[tank_center_row + 2][tank_center_col + 1] < 1 &&
+        board[tank_center_row + 2][tank_center_col-1] < 1)
+    {
+      board[tank_center_row + 2][tank_center_col] = player_num;
+      board[tank_center_row + 2][tank_center_col - 1] = player_num;
+      board[tank_center_row + 2][tank_center_col + 1] = player_num;
+      board[tank_center_row - 1][tank_center_col] = 0;
+      board[tank_center_row - 1][tank_center_col - 1] = 0;
+      board[tank_center_row - 1][tank_center_col + 1] = 0;
+    }
   }
 }
 
