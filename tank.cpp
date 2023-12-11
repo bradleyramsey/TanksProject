@@ -40,7 +40,6 @@ int partner_fd = -1;
 
 // Tank parameters for p1
 int tank_dir_p1 = DIR_NORTH;
-int worm_length = INIT_WORM_LENGTH;
 int updated_tank_dir_p1 = DIR_NORTH;
 int tank_face_p1 = DIR_NORTH;
 int weapon_dir_p1 = DIR_NORTH;
@@ -378,11 +377,11 @@ void draw_board()
         }
         else if (board[r][c] == PLAYER_1) 
         { 
-          draw_tank(board, &draw_p1, r, c, tank_dir_p1); // Draw tank
+          draw_tank(board, &draw_p1, r, c, tank_face_p1); // Draw tank
         }
         else if (board[r][c] == PLAYER_2) 
         { 
-          draw_tank(board, &draw_p2, r, c, tank_dir_p2); // Draw tank
+          draw_tank(board, &draw_p2, r, c, tank_face_p2); // Draw tank
         }
         else if (board[r][c] < 0)
         {
@@ -400,7 +399,7 @@ void draw_board()
 
     // Draw the score
     mvprintw(screen_row(-2), screen_col(BOARD_WIDTH - 9), "Score %03d\r",
-             worm_length - INIT_WORM_LENGTH);
+             3 - INIT_WORM_LENGTH);
 
     // Refresh the display
     refresh();
