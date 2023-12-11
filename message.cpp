@@ -139,6 +139,18 @@ int send_start(int fd, const int playerNum, char* hostname, int port, int index,
     return -1;
   }
 
+  // We also need to send index of the user so they can calculate their offset.
+  if (write(fd, &index, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+
+    // Lastly, we need to send the total number of users so they can calculate their increment.
+  if (write(fd, &numUsers, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+
   // But if we're sending to player 1, we don't have the port yet, so we'll just have them spin up their socket
   if(playerNum == 1){
     return 0;
@@ -170,17 +182,6 @@ int send_start(int fd, const int playerNum, char* hostname, int port, int index,
     return -1;
   }
 
-  // We also need to send index of the user so they can calculate their offset.
-  if (write(fd, &index, sizeof(int)) != sizeof(int)) {
-    // Writing failed, so return an error
-    return -1;
-  }
-
-    // Lastly, we need to send the total number of users so they can calculate their increment.
-  if (write(fd, &numUsers, sizeof(int)) != sizeof(int)) {
-    // Writing failed, so return an error
-    return -1;
-  }
 
   return 0;
 }
@@ -195,6 +196,22 @@ start_packet_t* receive_start(int fd) {
   }
 
   received_info->playerNum = playerNum;
+
+  //And read the index
+  int index;
+  if (read(fd, &index, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return NULL;
+  }
+  received_info->index = index;
+
+  //And read the numusers
+  int numUsers;
+  if (read(fd, &numUsers, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return NULL;
+  }
+  received_info->numUsers = numUsers;
 
   // Now see if we're player 1 or if we need to keep trying to read this message
   if (playerNum == 1) {
@@ -248,21 +265,7 @@ start_packet_t* receive_start(int fd) {
   received_info->port = port;
 
 
-  //And read the index
-  int index;
-  if (read(fd, &index, sizeof(int)) != sizeof(int)) {
-    // Reading failed. Return an error
-    return NULL;
-  }
-  received_info->index = index;
-
-  //And read the index
-  int numUsers;
-  if (read(fd, &numUsers, sizeof(int)) != sizeof(int)) {
-    // Reading failed. Return an error
-    return NULL;
-  }
-  received_info->numUsers = numUsers;
+  
 
   return received_info;
 }

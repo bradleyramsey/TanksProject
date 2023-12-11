@@ -295,39 +295,6 @@ int numPasswords;
 
 
 
-
-/**
- * Add a password to a password set
- * \param passwords   A pointer to a password set initialized with the function above.
- * \param username    The name of the user being added. The memory that holds this string's
- *                    characters will be reused, so if you keep a copy you must duplicate the
- *                    string. I recommend calling strdup().
- * \param password_hash   An array of MD5_DIGEST_LENGTH bytes that holds the hash of this user's
- *                        password. The memory that holds this array will be reused, so you must
- *                        make a copy of this value if you retain it in your data structure.
- */
-// void add_password(password_set_t* passwords, char* username, uint8_t* password_hash) {
-//   // Malloc space for the node
-//   password_set_node_t* node = (password_set_node_t*) malloc(sizeof(password_set_node_t));
-
-//   // Then assign all the fields
-//   node->username = strdup(username);
-//   memcpy(node->hashed_password, password_hash, MD5_DIGEST_LENGTH);
-//   node->next = passwords->buckets[password_hash[0] & numBucketsAndMask];
-//   node->prev = NULL;
-
-//   // And link the next's node's prev to this ones
-//   if(node->next != NULL){
-//     node->next->prev = node;
-//   }
-
-//   // Then update the bucket reference
-//   passwords->buckets[password_hash[0] & numBucketsAndMask] = node;
-
-//   // And the # of passwords
-//   // passwords->numPasswords++;
-// }
-
 // This is the fuction that runs on each thread
 __global__ void cracker_thread(password_set_node_t* passwords){
   // printf("test");
@@ -348,7 +315,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
   int hash_index;
 
   for(int i = 0; i < ALPHABET_SIZE; i++){
-    for(int j = 0; j < ALPHABET_SIZE; j++){
+    while(candidate_passwd[0] < 'z'){
       md5String(candidate_passwd, PASSWORD_LENGTH, candidate_hash);
 
       // Get the bucket corresponding to the hash
