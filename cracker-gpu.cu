@@ -463,6 +463,7 @@ void crack_password_list_num(password_set_node_t* argsPasswords, size_t numPassw
   cudaFree(S);
   cudaFree(PADDING);
 
+  // TODO: Send to host
   for(int i = 0; i < (numBucketsAndMask + 1); i++){
     if(argsPasswords[i].hashed_password[0] != 0){
       printf("%s %.*s\n", argsPasswords[i].username, PASSWORD_LENGTH, argsPasswords[i].solved_password);
@@ -506,66 +507,3 @@ int md5_string_to_bytes(const char* md5_string, uint8_t* bytes) {
 
   return 0;
 }
-
-void print_usage(const char* exec_name) {
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "  %s single <MD5 hash>\n", exec_name);
-  fprintf(stderr, "  %s list <password file name>\n", exec_name);
-}
-
-// int main(int argc, char** argv) {
-//   if(argc != 3) {
-//     print_usage(argv[0]);
-//     exit(1);
-//   }
-
-//   if(strcmp(argv[1], "list") == 0) {
-//     // Make and initialize a password set
-//     password_set_node_t* passwords = NULL;
-//     // init_password_set(&passwords);
-
-//     // Open the password file
-//     FILE* password_file = fopen(argv[2], "r");
-//     if(password_file == NULL) {
-//       perror("opening password file");
-//       exit(2);
-//     }
-
-//     // Read until we hit the end of the file
-//     while(!feof(password_file)) {
-//       // Make space to hold the username
-//       char username[MAX_USERNAME_LENGTH];
-
-//       // Make space to hold the MD5 string
-//       char md5_string[MD5_DIGEST_LENGTH * 2 + 1];
-
-//       // Make space to hold the MD5 bytes
-//       uint8_t password_hash[MD5_DIGEST_LENGTH];
-
-//       // Try to read. The space in the format string is required to eat the newline
-//       if(fscanf(password_file, "%s %s ", username, md5_string) != 2) {
-//         fprintf(stderr, "Error reading password file: malformed line\n");
-//         exit(2);
-//       }
-
-//       // Convert the MD5 string to MD5 bytes in our new node
-//       if(md5_string_to_bytes(md5_string, password_hash) != 0) {
-//         fprintf(stderr, "Error reading MD5\n");
-//         exit(2);
-//       }
-
-//       // Add the password to the password set
-//       // add_password(&passwords, username, password_hash);
-//       add_password_array(&passwords, username, password_hash);
-//     }
-
-//     // Now run the password list cracker
-//     crack_password_list(passwords);
-
-//   } else {
-//     print_usage(argv[0]);
-//     exit(1);
-//   }
-
-//   return 0;
-// }

@@ -346,7 +346,7 @@ char* receive_greeting(int fd) {
 */
 
 // Send a screen across a socket with a header that includes the game status.
-int send_screen(int fd, const int status, const int board [][BOARD_WIDTH]) {
+int send_screen(int fd, const int status, const int board [][BOARD_WIDTH], int opponentDir) {
   // If the message is NULL, set errno to EINVAL and return an error
   if (board == NULL || status == -1) {
     errno = EINVAL;
@@ -377,11 +377,17 @@ int send_screen(int fd, const int status, const int board [][BOARD_WIDTH]) {
     bytes_written += rc;
   }
 
+  // Last, send the length of the message in a size_t
+  if (write(fd, &opponentDir, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+
   return 0;
 }
 
 // Receive a message from a socket and update the board state. Returns the game status
-int receive_and_update_screen(int fd, int board[][BOARD_WIDTH]) {
+int receive_and_update_screen(int fd, int board[][BOARD_WIDTH], int* opponentDir) {
   // Allocate space for the message and a null terminator
   int status;
   if (read(fd, &status, sizeof(int)) != sizeof(int)) {
@@ -400,6 +406,11 @@ int receive_and_update_screen(int fd, int board[][BOARD_WIDTH]) {
 
   // Read the whole board, thanks to the big man above... Charlie Curtsinger
   recv(fd, board, bytesToRead, MSG_WAITALL);
+
+  if (read(fd, opponentDir, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return -1;
+  }
 
   return status;
 }

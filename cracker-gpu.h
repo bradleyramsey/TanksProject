@@ -9,7 +9,7 @@
 #define MAX_USERNAME_LENGTH 64
 #define PASSWORD_LENGTH 7
 
-#define numBucketsAndMask 4 // Needs to be at least as large as the max # of players
+#define numBucketsAndMask 128 // Needs to be at least as large as the max # of players
 
 // /**
 //  * This struct is the root of the data structure that will hold users and hashed passwords.
@@ -30,8 +30,6 @@ typedef struct password_set_node {
   uint8_t hashed_password [MD5_DIGEST_LENGTH];
   char solved_password[PASSWORD_LENGTH];
 } password_set_node_t;
-
-void print_usage(const char* exec_name);
 
 int md5_string_to_bytes(const char* md5_string, uint8_t* bytes);
 

@@ -493,18 +493,21 @@ void read_input()
 void update_tank()
 {
   int tank_dir = DIR_NORTH;
+  int opponent_dir;
   int weapon_dir = DIR_NORTH;
   while (running)
   {
-    receive_and_update_screen(partner_fd, board);
+    receive_and_update_screen(partner_fd, board, &opponent_dir);
     if (player_num == 1){
       tank_dir = updated_tank_dir_p1;
       tank_dir_p1 = updated_tank_dir_p1;
+      tank_dir_p2 = opponent_dir;
       weapon_dir = weapon_dir_p1;
     }
     else{
       tank_dir = updated_tank_dir_p2;
       tank_dir_p2 = updated_tank_dir_p2;
+      tank_dir_p1 = opponent_dir;
       weapon_dir = weapon_dir_p2;
     }
     int count = 0;
@@ -590,7 +593,7 @@ void update_tank()
         }
       }
     }
-    send_screen(partner_fd, 1, board);
+    send_screen(partner_fd, 1, board, tank_dir);
     // Update the worm movement speed to deal with rectangular cursors
     if (tank_dir == DIR_NORTH || tank_dir == DIR_SOUTH)
     {
@@ -696,11 +699,12 @@ void * tankMain(void * temp_args)
     board[BOARD_HEIGHT - 3][BOARD_WIDTH - 2] = 2;
     board[BOARD_HEIGHT - 3][BOARD_WIDTH - 1] = 2;
 
-    send_screen(partner_fd, 1, board);
+    send_screen(partner_fd, 1, board, 0);
   }
   else{
-    receive_and_update_screen(partner_fd, board);
-    send_screen(partner_fd, 1, board);
+    int dummy;
+    receive_and_update_screen(partner_fd, board, &dummy);
+    send_screen(partner_fd, 1, board, 0);
   }
 
   // Task handles for each of the game tasks

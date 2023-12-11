@@ -35,14 +35,14 @@ int send_init(int fd, const char* username, const uint8_t* passwordHash);
 int send_assignment(int fd, const int* playerNum, const int* partnerPort);
 int send_start(int fd, const int playerNum, char* hostname, int port, int index, int numUsers);
 int send_greeting(int fd, char* username);
-int send_screen(int fd, const int status, const int board [][BOARD_WIDTH]);
+int send_screen(int fd, const int status, const int board [][BOARD_WIDTH], int opponentDir);
 
 // Receive a message from a socket and return the message string (which must be freed later).
 // Returns NULL when an error occurs.
 init_packet_t* receive_init(int fd);
 start_packet_t* receive_start(int fd);
 char* receive_greeting(int fd);
-int receive_and_update_screen(int fd, int board [][BOARD_WIDTH]);
+int receive_and_update_screen(int fd, int board[][BOARD_WIDTH], int* opponentDir);
 
 
 
