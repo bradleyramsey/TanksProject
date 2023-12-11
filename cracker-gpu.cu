@@ -351,13 +351,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
     for(int j = 0; j < ALPHABET_SIZE; j++){
       md5String(candidate_passwd, PASSWORD_LENGTH, candidate_hash);
 
-  // Get the bucket corresponding to the hash
-  // // password = passwords->buckets[candidate_hash[0] & numBucketsAndMask];
-  // if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 && blockIdx.x == 0){
-  //   // passwords[0].username;
-  //   printf("%s %x", candidate_passwd, passwords[0].hashed_password);
-  //   // cuPrintf("test!!!");
-  // }
+      // Get the bucket corresponding to the hash
       hash_index = (candidate_passwd[0] & numBucketsAndMask);
 
       // Now check if the hash of the candidate password matches any of the hashs in the bucket, 
@@ -465,7 +459,7 @@ void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswords
   cudaFree(PADDING);
 
   for(int i = 0; i < (numBucketsAndMask + 1); i++){
-    if(argsPasswords[i].hashed_password[0] != 0){ // Change this to solved when sure it works
+    if(argsPasswords[i].solved_password[0] != 0){ // Change this to solved when sure it works
       printf("%s %.*s\n", argsPasswords[i].username, PASSWORD_LENGTH, argsPasswords[i].solved_password);
       send_password_match(host_fd, i, argsPasswords[i].solved_password);
     }

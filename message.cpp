@@ -480,7 +480,7 @@ int send_password_match(int fd, int index, char* password){
 
 int receive_and_update_password_match(int fd, password_set_node* passwordList){
   int index;
-  if (read(fd, &index, sizeof(size_t)) != sizeof(size_t)) {
+  if (read(fd, &index, sizeof(int)) != sizeof(int)) {
     // Reading failed. Return an error
     return -1;
   }
