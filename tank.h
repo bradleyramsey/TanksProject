@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <curses.h>
 
 // Game parameters
 #define INIT_WORM_LENGTH 3
@@ -21,6 +22,8 @@ typedef struct{
     char* opponentUsername;
     char* myUsername;
     int winnerResult;
+    WINDOW* gameState;
+    int numGames;
 } tank_main_args_t;
 
 void * tankMain(void* none);

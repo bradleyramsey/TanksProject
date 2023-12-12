@@ -146,6 +146,7 @@ void guestMain(char* addr){
     int opponent_socket_fd;
     int games = 0; // How many times you've played
     bool competitionStillGoing = true;
+    WINDOW * windowPointer = NULL;
     do{
         start_packet_t* startInfo = receive_start(host_socket_fd);
         if(startInfo->playerNum == 1 || startInfo->playerNum == 2){
@@ -207,6 +208,8 @@ void guestMain(char* addr){
         tankArgs->partner_fd = opponent_socket_fd;
         tankArgs->opponentUsername = opponentsUsername;
         tankArgs->myUsername = username;
+        tankArgs->gameState = windowPointer;
+        tankArgs->numGames = games;
 
             if (pthread_create(&tankThread, NULL, &tankMain, (void*) tankArgs)) {
                 perror("pthread_create failed");
@@ -247,6 +250,7 @@ void guestMain(char* addr){
 
         pthread_join(tankThread, NULL);
         multi_send_password_and_end(host_socket_fd, 1, 0, NULL, tankArgs->winnerResult);
+        windowPointer = tankArgs->gameState;
         games++;
         //TO DO: Close old sockets?
     } while(competitionStillGoing);

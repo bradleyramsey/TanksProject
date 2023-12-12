@@ -632,13 +632,17 @@ void update_tank()
 // Entry point: Set up the game, create jobs, then run the scheduler
 void * tankMain(void * temp_args)
 {
+  WINDOW *mainwin;
   tank_main_args_t* args;
+  int games;
   if(temp_args != NULL){
     args = (tank_main_args_t*) temp_args;
     player_num = args->player_num;
     partner_fd = args->partner_fd;
     opponentUsername = args->opponentUsername;
     myUsername = args->myUsername;
+    mainwin = args->gameState;
+    games = args->numGames;
   }
   else{
     perror("Args not recongized");
@@ -646,7 +650,13 @@ void * tankMain(void * temp_args)
   }
   
   // Initialize the ncurses window
-  WINDOW *mainwin = initscr();
+  if (games == 0){
+    mainwin = initscr();
+  }
+  else{
+    refresh();
+    mainwin = initscr();
+  }
   if (mainwin == NULL)
   {
     fprintf(stderr, "Error initializing ncurses.\n");
@@ -739,9 +749,9 @@ void * tankMain(void * temp_args)
     }
     
   }
-
+  args->gameState = mainwin;
   // Clean up window
-  delwin(mainwin);
+  //delwin(mainwin);
   endwin();
 
   return 0;
