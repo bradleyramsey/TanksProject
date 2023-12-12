@@ -648,14 +648,17 @@ void * tankMain(void * temp_args)
     perror("Args not recongized");
     return NULL;
   }
+
+  running = true;
   
   // Initialize the ncurses window
   if (games == 0){
     mainwin = initscr();
   }
   else{
-    refresh();
-    mainwin = initscr();
+    // refresh();
+    // mainwin = initscr();
+    wrefresh(mainwin);
   }
   if (mainwin == NULL)
   {
