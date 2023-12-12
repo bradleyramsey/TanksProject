@@ -566,8 +566,10 @@ void update_tank()
       }
       else if (weapon_dir == DIR_EAST)
       {
-        board[tank_center_row][tank_center_col + 3] = (-1 * player_num);
-        fire_weapon = false;
+        if (tank_center_col + 3 < BOARD_WIDTH){
+          board[tank_center_row][tank_center_col + 3] = (-1 * player_num);
+          fire_weapon = false;
+        }
       }
       else if (weapon_dir == DIR_SOUTH)
       {
@@ -576,8 +578,10 @@ void update_tank()
       }
       else if (weapon_dir == DIR_WEST)
       {
-        board[tank_center_row][tank_center_col - 3] = (-1 * player_num);
-        fire_weapon = false;
+        if (tank_center_col - 3 > 0){
+          board[tank_center_row][tank_center_col - 3] = (-1 * player_num);
+          fire_weapon = false;
+        }
       }
     }
     // Move the tank based on the direction the tank is facing
@@ -650,6 +654,7 @@ void * tankMain(void * temp_args)
   }
 
   running = true;
+  p1_winner = false;
   
   // Initialize the ncurses window
   if (games == 0){
