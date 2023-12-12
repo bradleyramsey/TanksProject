@@ -17,7 +17,7 @@
 
 
 // How many characters do we have to search through
-#define ALPHABET_SIZE 36
+
 
 //TODO: maybe have an array of all the characters in the alphabet?
 // __device__ alphabet[] = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',

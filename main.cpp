@@ -6,14 +6,14 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <math.h>
 #include <openssl/md5.h>
 #include "socket.h"
 #include "message.h"
 
 #include "cracker-gpu.h"
 #include "tank.h"
-
-
+#include "util.h"
 
 typedef struct {
   int client_socket;
@@ -606,6 +606,7 @@ void * listen_init(void* input_args){
         send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port, thread_index, numPlayers);
     }
     send_password_list(client_socket_fd, passwords, numPasswordsUnique);
+    int start_time = time_ms();
 
     // This (and all below) will only end for one thread, so we don't have to worry about repeat printing
     // Also, if theres a thread that's the odd one out, and it has the passwords, we aren't going to get 
@@ -645,6 +646,7 @@ void * listen_init(void* input_args){
             perror("Unknown type");
         }
     }
+    int end_time = time_ms();
     for(int i = 0; i < (numBucketsAndMask + 1); i++){ // Copy over the passwords from the password list to the user list for later use
         if(passwords[i].hashed_password[0] != 0){ 
             for(int j = 0; j < MAX_PLAYERS; j++){
@@ -658,11 +660,17 @@ void * listen_init(void* input_args){
             }
         }
     }
+
+    int time_s = (end_time - start_time) / 1000;
+    size_t search_space = pow(ALPHABET_SIZE, PASSWORD_LENGTH);
+    printf("\n\nTested \033[0;31m%d passwords\033[0m in %s seconds.\n\n %d passwords per second\n %d times faster than our top lab implementation\n\nPasswords:\n",
+                search_space, time_s, search_space/time_s, (search_space/time_s)/(308915776/10.125));
     for(int i = 0; i < MAX_PLAYERS; i++){
         if(userList[i].solvedPassword[0] != 0){
             printf("%s %.*s\n", userList[i].username, PASSWORD_LENGTH, userList[i].solvedPassword);
         }
     }
+    printf("\n\n");
 
     int type;
     while(true){ // TO DO: Deal

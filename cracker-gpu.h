@@ -8,6 +8,9 @@
 #define MAX_USERNAME_LENGTH 64
 #define PASSWORD_LENGTH 7
 
+#define ALPHABET_SIZE 36
+
+
 #define numBucketsAndMask 127 // Needs to be at least as large as the max # of players
 
 
