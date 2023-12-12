@@ -392,7 +392,7 @@ void hostMain(char * type){
     GameState = 1;
     usersReady = 0;
 
-    sleep(5);
+    sleep(3);
 
     GameState = 0;
     for(int j = 0; j < MAX_PLAYERS; j++){
@@ -458,6 +458,10 @@ void hostMain(char * type){
         
         GameState = 1;
         usersReady = 0;
+
+        sleep(2);
+        GameState = 0;
+        userInput = '\0';
     }
 
     
