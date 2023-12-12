@@ -663,7 +663,7 @@ void * listen_init(void* input_args){
 
     int time_s = (end_time - start_time) / 1000;
     size_t search_space = pow(ALPHABET_SIZE, PASSWORD_LENGTH);
-    printf("\n\nTested \033[0;31m%d passwords\033[0m in %s seconds.\n\n %d passwords per second\n %d times faster than our top lab implementation\n\nPasswords:\n",
+    printf("\n\nTested \033[0;31m%d passwords\033[0m in %d seconds.\n\n %d passwords per second\n %d times faster than our top lab implementation\n\nPasswords:\n",
                 search_space, time_s, search_space/time_s, (search_space/time_s)/(308915776/10.125));
     for(int i = 0; i < MAX_PLAYERS; i++){
         if(userList[i].solvedPassword[0] != 0){
