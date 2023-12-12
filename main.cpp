@@ -122,10 +122,10 @@ void guestMain(char* addr){
                 continue;
             valid = true;
             for(int i = 0; i < strlen(password); i++){
-                if(!((password[i] > 'a' && password[i] < 'z')
+                if(!((password[i] >= 'a' && password[i] <= 'z')
                 ||
-                //     (password[i] > 'A' && password[i] < 'Z')||
-                    (password[i] > '0' && password[i] < '9')
+                //     (password[i] >= 'A' && password[i] <= 'Z')||
+                    (password[i] >= '0' && password[i] <= '9')
                     )){
                     valid = false;
                     continue;
