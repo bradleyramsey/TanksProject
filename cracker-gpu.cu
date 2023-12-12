@@ -20,13 +20,22 @@
 #define ALPHABET_SIZE 26
 
 //TODO: maybe have an array of all the characters in the alphabet?
+// __device__ alphabet[] = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+//                          'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+//                          '0','1','2','3','4','5','6','7','8','9'}
+
+// __device__ alphabet[] = {'a'-'a','b'-'a','c'-'a','d'-'a','e'-'a','f'-'a','g'-'a','h'-'a','i'-'a','j'-'a','k'-'a','l'-'a','m'-'a','n'-'a','o'-'a','p'-'a','q'-'a','r'-'a','s'-'a','t'-'a','u'-'a','v'-'a','w'-'a','x'-'a','y'-'a','z'-'a',
+//                          'A'-'a','B'-'a','C'-'a','D'-'a','E'-'a','F'-'a','G'-'a','H'-'a','I'-'a','J'-'a','K'-'a','L'-'a','M'-'a','N'-'a','O'-'a','P'-'a','Q'-'a','R'-'a','S'-'a','T'-'a','U'-'a','V'-'a','W'-'a','X'-'a','Y'-'a','Z'-'a',
+//                          '0'-'a','1'-'a','2'-'a','3'-'a','4'-'a','5'-'a','6'-'a','7'-'a','8'-'a','9'-'a'}
+
+__device__ int alphabet[] = {'a'-'a','b'-'a','c'-'a','d'-'a','e'-'a','f'-'a','g'-'a','h'-'a','i'-'a','j'-'a','k'-'a','l'-'a','m'-'a','n'-'a','o'-'a','p'-'a','q'-'a','r'-'a','s'-'a','t'-'a','u'-'a','v'-'a','w'-'a','x'-'a','y'-'a','z'-'a'};
 
 // Each board will be a block
 #define THREADS_PER_BLOCK (ALPHABET_SIZE * ALPHABET_SIZE)
 #define PASSWORDS_PER_THREAD (ALPHABET_SIZE * ALPHABET_SIZE)
 #define PASSWORDS_PER_BLOCK (PASSWORDS_PER_THREAD * THREADS_PER_BLOCK)
 
-#define SEARCH_SPACE_SIZE (pow(26, PASSWORD_LENGTH))
+#define SEARCH_SPACE_SIZE (pow(ALPHABET_SIZE, PASSWORD_LENGTH))
 
 #define TRUE 1
 #define FALSE 0
@@ -303,19 +312,26 @@ __global__ void cracker_thread(password_set_node_t* passwords){
 
   // Same as the individual thread, but now we have each start on offset, and inc by the # of threads
   char candidate_passwd[] = "aaaaaaa";
-  candidate_passwd[0]+= offsetGPU;
-  candidate_passwd[2]+= threadIdx.x;
-  candidate_passwd[3]+= threadIdx.y;
+  candidate_passwd[0]+= alphabet[offsetGPU];
+  candidate_passwd[2]+= alphabet[threadIdx.x];
+  candidate_passwd[3]+= alphabet[threadIdx.y];
   // candidate_passwd[2]+= threadIdx.z;
-  candidate_passwd[4]+= blockIdx.x % 26;
-  candidate_passwd[5]+= (blockIdx.x / 26) % 26;
-  candidate_passwd[6]+= ((blockIdx.x / 26) / 26) % 26;
+  candidate_passwd[4]+= alphabet[blockIdx.x % ALPHABET_SIZE];
+  candidate_passwd[5]+= alphabet[(blockIdx.x / ALPHABET_SIZE) % ALPHABET_SIZE];
+  candidate_passwd[6]+= alphabet[((blockIdx.x / ALPHABET_SIZE) / ALPHABET_SIZE) % ALPHABET_SIZE];
+  // candidate_passwd[0]+= offsetGPU;
+  // candidate_passwd[2]+= threadIdx.x;
+  // candidate_passwd[3]+= threadIdx.y;
+  // // candidate_passwd[2]+= threadIdx.z;
+  // candidate_passwd[4]+= blockIdx.x % ALPHABET_SIZE;
+  // candidate_passwd[5]+= (blockIdx.x / ALPHABET_SIZE) % ALPHABET_SIZE;
+  // candidate_passwd[6]+= ((blockIdx.x / ALPHABET_SIZE) / ALPHABET_SIZE) % ALPHABET_SIZE;
   // candidate_passwd[6]+= (((blockIdx.x / 26) / 26) / 26) % 26;
   // MD5((unsigned char*)candidate_passwd, PASSWORD_LENGTH, candidate_hash); //< Do the hash (this is the slowest part of this implementation)
   int hash_index;
 
   for(int i = 0; i < ALPHABET_SIZE; i++){
-    while(candidate_passwd[0] < 'z'){
+    while(candidate_passwd[0] < 'a' + alphabet[ALPHABET_SIZE - 1]){
       md5String(candidate_passwd, PASSWORD_LENGTH, candidate_hash);
 
       // Get the bucket corresponding to the hash
@@ -338,8 +354,10 @@ __global__ void cracker_thread(password_set_node_t* passwords){
       // }
       candidate_passwd[0] += numUsersGPU;
     }
-    candidate_passwd[0] = 'a' + offsetGPU;
-    candidate_passwd[1]++;
+    candidate_passwd[0] = 'a' + alphabet[offsetGPU];
+    candidate_passwd[1] = 'a' + alphabet[(candidate_passwd[1] - 'a') + 1];
+    // candidate_passwd[0] = 'a' + offsetGPU;
+    // candidate_passwd[1]++;
   }
   // Potential TO DO: Add check somewhere if we've cracked all passwords? This would be tough among all 
   //                  the different computers and threads.
@@ -405,7 +423,7 @@ void* crack_password_list(void* tempArgs) {
   
   // dim3 layout(ALPHABET_SIZE, ALPHABET_SIZE, ALPHABET_SIZE);
   size_t blocks = (SEARCH_SPACE_SIZE + PASSWORDS_PER_BLOCK - 1) / PASSWORDS_PER_BLOCK;
-  cracker_thread<<<blocks, dim3(26, 26)>>>(GPUpasswords); // Actually run the solver on each thread
+  cracker_thread<<<blocks, dim3(ALPHABET_SIZE, ALPHABET_SIZE)>>>(GPUpasswords); // Actually run the solver on each thread
 
   // Wait for all the threads to finish
   if (cudaDeviceSynchronize() != cudaSuccess) {
