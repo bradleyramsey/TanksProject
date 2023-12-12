@@ -203,8 +203,10 @@ void guestMain(char* addr){
 
             tankArgs = (tank_main_args_t*) malloc(sizeof(tank_main_args_t));
 
-            tankArgs->player_num = startInfo->playerNum;
-            tankArgs->partner_fd = opponent_socket_fd;
+        tankArgs->player_num = startInfo->playerNum;
+        tankArgs->partner_fd = opponent_socket_fd;
+        tankArgs->opponentUsername = opponentsUsername;
+        tankArgs->myUsername = username;
 
             if (pthread_create(&tankThread, NULL, &tankMain, (void*) tankArgs)) {
                 perror("pthread_create failed");
