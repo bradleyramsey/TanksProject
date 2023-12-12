@@ -200,6 +200,8 @@ void guestMain(char* addr){
 
         tankArgs->player_num = startInfo->playerNum;
         tankArgs->partner_fd = opponent_socket_fd;
+        tankArgs->opponentUsername = opponentsUsername;
+        tankArgs->myUsername = username;
 
         if (pthread_create(&tankThread, NULL, &tankMain, (void*) tankArgs)) {
             perror("pthread_create failed");

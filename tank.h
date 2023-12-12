@@ -18,6 +18,8 @@
 typedef struct{
     int player_num;
     int partner_fd;
+    char* opponentUsername;
+    char* myUsername;
 } tank_main_args_t;
 
 void * tankMain(void* none);
