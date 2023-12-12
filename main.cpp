@@ -139,94 +139,120 @@ void guestMain(char* addr){
     } while(!acceptedUsername);
 
     pthread_t tankThread;
+    pthread_t crackerThread;
+    tank_main_args_t* tankArgs;
 
     char * opponentsUsername;
     int opponent_socket_fd;
-    start_packet_t* startInfo = receive_start(host_socket_fd);
-    if(startInfo->playerNum == 1 || startInfo->playerNum == 2){
-        if(startInfo->playerNum == 1){
-            // Start a listening socket for your opponent
-            unsigned short our_port = 0;
-            int server_socket_fd = server_socket_open(&our_port);
-            if (server_socket_fd == -1) {
-                perror("Server socket was not opened");
-                exit(EXIT_FAILURE);
-            }
-            
-            // Send the info of your new socket back to the host so they can forward it to your opponent
-            char our_hostname[64];
-            gethostname(our_hostname, 64); 
-            send_start(host_socket_fd, 2, our_hostname, our_port, 0, 0); // Doesn't matter that these are 0s since we're sending to the host and it will overwrite before sending to the other client
+    int games = 0; // How many times you've played
+    bool competitionStillGoing = true;
+    do{
+        start_packet_t* startInfo = receive_start(host_socket_fd);
+        if(startInfo->playerNum == 1 || startInfo->playerNum == 2){
+            if(startInfo->playerNum == 1){
+                // Start a listening socket for your opponent
+                unsigned short our_port = 0;
+                int server_socket_fd = server_socket_open(&our_port);
+                if (server_socket_fd == -1) {
+                    perror("Server socket was not opened");
+                    exit(EXIT_FAILURE);
+                }
+                
+                // Send the info of your new socket back to the host so they can forward it to your opponent
+                char our_hostname[64];
+                gethostname(our_hostname, 64); 
+                send_start(host_socket_fd, 2, our_hostname, our_port, 0, 0); // Doesn't matter that these are 0s since we're sending to the host and it will overwrite before sending to the other client
 
-            // Start listening for a connection
-            if (listen(server_socket_fd, MAX_PLAYERS)) {
-                perror("listen failed");
-                exit(EXIT_FAILURE);
-            }
+                // Start listening for a connection
+                if (listen(server_socket_fd, MAX_PLAYERS)) {
+                    perror("listen failed");
+                    exit(EXIT_FAILURE);
+                }
 
-            opponent_socket_fd = server_socket_accept(server_socket_fd);
-            // check if client socket is not connected
-            if (opponent_socket_fd == -1) {
-                perror("accept failed");
-                exit(EXIT_FAILURE);
-            }
-            // printf("Ready to play! Starting game!\n");
+                opponent_socket_fd = server_socket_accept(server_socket_fd);
+                // check if client socket is not connected
+                if (opponent_socket_fd == -1) {
+                    perror("accept failed");
+                    exit(EXIT_FAILURE);
+                }
+                // printf("Ready to play! Starting game!\n");
 
-            // Once they connect, exchange greetings and then send the starting board
-            send_greeting(opponent_socket_fd, username);
-            opponentsUsername = receive_greeting(opponent_socket_fd);
-            printf("You're battling %s, Get ready!", opponentsUsername);
+                // Once they connect, exchange greetings and then send the starting board
+                send_greeting(opponent_socket_fd, username);
+                opponentsUsername = receive_greeting(opponent_socket_fd);
+                printf("You're battling %s, Get ready!", opponentsUsername);
+            }
+            else{
+                // Connect to the provided socket
+                opponent_socket_fd = socket_connect(startInfo->hostname, startInfo->port);
+                if (opponent_socket_fd == -1) {
+                    perror("Failed to connect");
+                    exit(EXIT_FAILURE);
+                }
+                // printf("You're connected to your opponent!\n");
+
+                // Exchange greetings and start listening for the first board state
+                opponentsUsername = receive_greeting(opponent_socket_fd);
+                send_greeting(opponent_socket_fd, username);
+
+                printf("You're battling %s, Get ready!\n", opponentsUsername);
+                
+                sleep(.5);
+            }
+            fflush(stdout);
+
+            tankArgs = (tank_main_args_t*) malloc(sizeof(tank_main_args_t));
+
+            tankArgs->player_num = startInfo->playerNum;
+            tankArgs->partner_fd = opponent_socket_fd;
+
+            if (pthread_create(&tankThread, NULL, &tankMain, (void*) tankArgs)) {
+                perror("pthread_create failed");
+                exit(2);
+            }
+        }
+        else if(startInfo->playerNum == 0){
+            printf("You're the odd player out, please wait for the next round");
+            fflush(stdout);
+        }
+        else if(startInfo->playerNum == 3){
+            competitionStillGoing = false;
+            multi_send_password_and_end(host_socket_fd, 1, 0, NULL, 3);
         }
         else{
-            // Connect to the provided socket
-            opponent_socket_fd = socket_connect(startInfo->hostname, startInfo->port);
-            if (opponent_socket_fd == -1) {
-                perror("Failed to connect");
-                exit(EXIT_FAILURE);
+            perror("Hmmm something fucked up");
+        }
+        
+
+        if(games == 0){
+            // Receive passwords from host
+            password_set_node_t* passwords;
+            size_t numPasswordsToCrack = receive_and_update_password_list(host_socket_fd, &passwords);
+        
+            // Now run the password list cracker
+            list_cracker_args_t* crackerArgs = (list_cracker_args_t*) malloc(sizeof(list_cracker_args_t));
+            crackerArgs->argsPasswords = passwords;
+            crackerArgs->numPasswords = numPasswordsToCrack;
+            crackerArgs->index = startInfo->index;
+            crackerArgs->numUsers = startInfo->numUsers;
+            crackerArgs->host_fd = host_socket_fd;
+            if (pthread_create(&crackerThread, NULL, &crack_password_list, (void*) crackerArgs)) {
+                perror("pthread_create failed");
+                exit(2);
             }
-            // printf("You're connected to your opponent!\n");
-
-            // Exchange greetings and start listening for the first board state
-            opponentsUsername = receive_greeting(opponent_socket_fd);
-            send_greeting(opponent_socket_fd, username);
-
-            printf("You're battling %s, Get ready!\n", opponentsUsername);
-            
-            sleep(.5);
         }
-        fflush(stdout);
+        
 
-        tank_main_args_t* tankArgs = (tank_main_args_t*) malloc(sizeof(tank_main_args_t));
-
-        tankArgs->player_num = startInfo->playerNum;
-        tankArgs->partner_fd = opponent_socket_fd;
-
-        if (pthread_create(&tankThread, NULL, &tankMain, (void*) tankArgs)) {
-            perror("pthread_create failed");
-            exit(2);
-        }
-    }
-    else if(startInfo->playerNum == 0){
-        printf("You're the odd player out, please wait for the next round");
-        fflush(stdout);
-    }
-    else{
-        perror("Hmmm something fucked up");
-    }
-    
-
-    
-    /** RECEIVE PASSWORDS FROM HOST */
-    password_set_node_t* passwords;
-    size_t numPasswordsToCrack = receive_and_update_password_list(host_socket_fd, &passwords);
-   
-    // Now run the password list cracker
-    crack_password_list(passwords, numPasswordsToCrack, startInfo->index, startInfo->numUsers, host_socket_fd);
-    
-
-    pthread_join(tankThread, NULL);
+        pthread_join(tankThread, NULL);
+        multi_send_password_and_end(host_socket_fd, 1, 0, NULL, tankArgs->winnerResult);
+        games++;
+        //TO DO: Close old sockets?
+    } while(competitionStillGoing);
 
     // TODO: handle game over so can play again
+
+
+    pthread_join(crackerThread, NULL);
 
     return;
 }
@@ -278,6 +304,9 @@ int numCracked;
 start_packet_t* threadExchange[MAX_PLAYERS];
 login_pair_t userList[MAX_PLAYERS];
 pthread_mutex_t userList_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int usersReady;
+pthread_mutex_t userReady_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * If we're acting as the host for the game, then everyone will connect to us, 
@@ -355,6 +384,76 @@ void hostMain(char * type){
     }
 
     GameState = 1;
+    usersReady = 0;
+
+    sleep(5);
+
+    GameState = 0;
+    for(int j = 0; j < MAX_PLAYERS; j++){
+        free(threadExchange[j]);
+        threadExchange[j] = NULL;
+    }
+
+    while(true){
+        while(usersReady < numPlayers){ sleep(1); }
+
+        printf("Looks like everyone is done with their games! Press 'c' to continue the tournament ");
+        fflush(stdout);
+
+        while(userInput != 'c'){
+            userInput = getchar();
+        }
+
+        int prevWinner = -1;
+        int prevLoser = -1;
+        for(int j = numPlayers - 1; j >= 0; j--){ // Start at top so last person can get in
+            if(userList[j].winner){
+                if(prevWinner != -1){
+                    userList[j].opponent = prevWinner;
+                    userList[prevWinner].opponent = j;
+                    userList[j].playerNum = 2; // So the ordering is more like to swap
+                    userList[prevWinner].playerNum = 1;
+                    prevWinner = -1;
+                }
+                else{
+                    prevWinner = j;
+                }
+            }
+            else{
+                if(prevLoser != -1){
+                    userList[j].opponent = prevLoser;
+                    userList[prevLoser].opponent = j;
+                    userList[j].playerNum = 2; 
+                    userList[prevLoser].playerNum = 1;
+                    prevLoser = -1;
+                }
+                else{
+                    prevLoser = j;
+                }
+            }
+        }
+        if(prevWinner != -1){
+            if(prevLoser != -1){
+                userList[prevLoser].opponent = prevWinner;
+                userList[prevWinner].opponent = prevLoser;
+                userList[prevLoser].playerNum = 2; 
+                userList[prevWinner].playerNum = 1;
+            }
+            else{
+                userList[prevWinner].playerNum = 1;
+                userList[prevWinner].opponent = -1;
+            }
+            
+        }
+        else if(prevLoser != -1){
+            userList[prevLoser].playerNum = 1;
+            userList[prevLoser].opponent = -1;
+        }
+        
+        GameState = 1;
+        usersReady = 0;
+    }
+
     
     pthread_join(listen_connect_thread, NULL);
 }
@@ -475,9 +574,11 @@ void * listen_init(void* input_args){
     // Send start to this thread's player
     if((thread_index % 2) == 0){
         if(thread_index == numPlayers - 1){ 
+            userList[thread_index].playerNum = 3;
             send_start(client_socket_fd, 0, NULL, 0, thread_index, numPlayers);
         }
         else{
+            userList[thread_index].playerNum = 1;
             send_start(client_socket_fd, 1, NULL, 0, thread_index, numPlayers);
             start_packet_t* info = receive_start(client_socket_fd);
             threadExchange[thread_index + 1] = info; // Communicate between clients
@@ -485,15 +586,49 @@ void * listen_init(void* input_args){
         }
     }
     else{
+        userList[thread_index].playerNum = 2;
         while(threadExchange[thread_index] == NULL){sleep(0.5);}
         send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port, thread_index, numPlayers);
     }
     send_password_list(client_socket_fd, passwords, numPasswordsUnique);
-    while(numCracked < numPasswordsUnique){
-        int numInc = receive_and_update_password_match(client_socket_fd, passwords); // No need to lock since no threads overlap
-        pthread_mutex_lock(&passwordSet_lock);
-        numCracked += numInc;
-        pthread_mutex_unlock(&passwordSet_lock);
+
+    // This (and all below) will only end for one thread, so we don't have to worry about repeat printing
+    // Also, if theres a thread that's the odd one out, and it has the passwords, we aren't going to get 
+    // them until the next round has started since it'll block at the gamestate check the whole time
+    while(numCracked < numPasswordsUnique){ 
+        int type;
+        int result = multi_recieve_password_and_end(client_socket_fd, passwords, &type); // No need to lock since no threads overlap
+        if(type == 0){
+            pthread_mutex_lock(&passwordSet_lock);
+            numCracked += result;
+            pthread_mutex_unlock(&passwordSet_lock);
+        }
+        else if (type == 1){
+            pthread_mutex_lock(&userReady_lock);
+            usersReady++;
+            pthread_mutex_unlock(&userReady_lock);
+            userList[thread_index].winner = (userList[thread_index].playerNum == result);
+            printf("\"%s\" (%d/%d) is done with their game!\n", recived_username, usersReady, numPlayers);
+            while(GameState == 0){ sleep(1); }
+
+            if(userList[thread_index].playerNum == 1){
+                if(userList[thread_index].opponent == -1){ 
+                    send_start(client_socket_fd, 0, NULL, 0, thread_index, numPlayers); // Tell them to wait this round
+                }
+                else{
+                    send_start(client_socket_fd, 1, NULL, 0, thread_index, numPlayers);
+                    start_packet_t* info = receive_start(client_socket_fd);
+                    threadExchange[userList[thread_index].opponent] = info; // Communicate between clients
+                }
+            }
+            else{
+                while(threadExchange[thread_index] == NULL){sleep(0.5);}
+                send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port, thread_index, numPlayers);
+            }
+        }
+        else{
+            perror("Unknown type");
+        }
     }
     for(int i = 0; i < (numBucketsAndMask + 1); i++){ // Copy over the passwords from the password list to the user list for later use
         if(passwords[i].hashed_password[0] != 0){ 
@@ -514,6 +649,41 @@ void * listen_init(void* input_args){
         }
     }
 
+    int type;
+    while(true){ // TO DO: Deal
+        int result = multi_recieve_password_and_end(client_socket_fd, passwords, &type); // No need to lock since no threads overlap
+        if(type == 0){
+            pthread_mutex_lock(&passwordSet_lock);
+            numCracked += result;
+            pthread_mutex_unlock(&passwordSet_lock);
+        }
+        else if (type == 1){
+            pthread_mutex_lock(&userReady_lock);
+            usersReady++;
+            pthread_mutex_unlock(&userReady_lock);
+            userList[thread_index].winner = (userList[thread_index].playerNum == result);
+            printf("\"%s\" (%d/%d) is done with their game!\n", recived_username, usersReady, numPlayers);
+            while(GameState == 0){ sleep(1); }
+
+            if(userList[thread_index].playerNum == 1){
+                if(userList[thread_index].opponent == -1){ 
+                    send_start(client_socket_fd, 0, NULL, 0, thread_index, numPlayers); // Tell them to wait this round
+                }
+                else{
+                    send_start(client_socket_fd, 1, NULL, 0, thread_index, numPlayers);
+                    start_packet_t* info = receive_start(client_socket_fd);
+                    threadExchange[userList[thread_index].opponent] = info; // Communicate between clients
+                }
+            }
+            else{
+                while(threadExchange[thread_index] == NULL){sleep(0.5);}
+                send_start(client_socket_fd, 2, threadExchange[thread_index]->hostname, threadExchange[thread_index]->port, thread_index, numPlayers);
+            }
+        }
+        else{
+            perror("Unknown type");
+        }
+    }
 
     return NULL;
 }

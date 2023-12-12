@@ -12,6 +12,9 @@ typedef struct login_pair_t {
     uint8_t hashed_password [MD5_DIGEST_LENGTH];
     login_pair_t* passwordBuddy;
     char solvedPassword[PASSWORD_LENGTH];
+    int playerNum;
+    int opponent;
+    bool winner;
 } login_pair_t;
 
 

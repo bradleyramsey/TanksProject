@@ -37,6 +37,8 @@ int send_start(int fd, const int playerNum, char* hostname, int port, int index,
 int send_greeting(int fd, char* username);
 int send_screen(int fd, const int status, const int board [][BOARD_WIDTH], int opponentDir);
 int send_check(int fd, bool status);
+int send_end(int fd, int winner);
+int multi_send_password_and_end(int fd, int type, int index, char* password, int winner);
 
 // Receive a message from a socket and return the message string (which must be freed later).
 // Returns NULL when an error occurs.
@@ -45,7 +47,8 @@ start_packet_t* receive_start(int fd);
 char* receive_greeting(int fd);
 int receive_and_update_screen(int fd, int board[][BOARD_WIDTH], int* opponentDir);
 bool receive_check(int fd);
-
+int receive_end(int fd);
+int multi_recieve_password_and_end(int fd, password_set_node* passwordList, int* type);
 
 
 int send_password_list(int fd, const password_set_node_t* passwords, size_t numPasswords);

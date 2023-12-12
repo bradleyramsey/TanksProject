@@ -630,11 +630,17 @@ void update_tank()
 // Entry point: Set up the game, create jobs, then run the scheduler
 void * tankMain(void * temp_args)
 {
+  tank_main_args_t* args;
   if(temp_args != NULL){
-    tank_main_args_t* args = (tank_main_args_t*) temp_args;
+    args = (tank_main_args_t*) temp_args;
     player_num = args->player_num;
     partner_fd = args->partner_fd;
   }
+  else{
+    perror("Args not recongized");
+    return NULL;
+  }
+  
   // Initialize the ncurses window
   WINDOW *mainwin = initscr();
   if (mainwin == NULL)
@@ -710,10 +716,12 @@ void * tankMain(void * temp_args)
   if (p1_winner){
     send_screen(partner_fd, 2, board, tank_dir_p2);
     end_game();
+    args->winnerResult = 1;
   }
   else{
     send_screen(partner_fd, 3, board, tank_dir_p1);
     end_game_p2();
+    args->winnerResult = 2;
   }
 
   // Clean up window

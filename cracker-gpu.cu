@@ -341,7 +341,7 @@ __global__ void cracker_thread(password_set_node_t* passwords){
     candidate_passwd[0] = 'a' + offsetGPU;
     candidate_passwd[1]++;
   }
-  // Potential TODO: Add check somewhere if we've cracked all passwords? This would be tough among all 
+  // Potential TO DO: Add check somewhere if we've cracked all passwords? This would be tough among all 
   //                  the different computers and threads.
 }
 
@@ -352,8 +352,14 @@ __global__ void cracker_thread(password_set_node_t* passwords){
  *
  * \returns The number of passwords cracked in the list
  */
-void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd) {
-  numPasswords = numPasswordsArg;
+void* crack_password_list(void* tempArgs) {
+  // Unpack
+  list_cracker_args_t* args = (list_cracker_args_t*) tempArgs;
+  password_set_node_t* argsPasswords = args->argsPasswords;
+  numPasswords = args->numPasswords;
+  int index = args->index;
+  int numUsers = args->numUsers;
+  int host_fd = args->host_fd;
 
 
   if (cudaMemcpyToSymbol(K, cpuK, sizeof(uint32_t) * 64, 0, cudaMemcpyHostToDevice) !=
@@ -420,7 +426,8 @@ void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswords
   for(int i = 0; i < (numBucketsAndMask + 1); i++){
     if(argsPasswords[i].solved_password[0] != 0){ 
       // printf("%s %.*s\n", argsPasswords[i].username, PASSWORD_LENGTH, argsPasswords[i].solved_password);
-      send_password_match(host_fd, i, argsPasswords[i].solved_password);
+      multi_send_password_and_end(host_fd, 0, i, argsPasswords[i].solved_password, 0);
     }
   }
+  return NULL;
 }

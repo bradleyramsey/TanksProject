@@ -124,6 +124,15 @@ init_packet_t* receive_init(int fd) {
   return received_info;
 }
 
+/**
+ * NOTE: the player nums are:
+ *    0 - waiting
+ *    1 - p1
+ *    2 - p2
+ *    3 - tournament over
+ * 
+ *   -1 - ERROR
+*/
 
 // Send a across a socket with a header that includes the message length.
 int send_start(int fd, const int playerNum, char* hostname, int port, int index, int numUsers) {
@@ -153,7 +162,7 @@ int send_start(int fd, const int playerNum, char* hostname, int port, int index,
   }
 
   // But if we're sending to player 1, we don't have the port yet, so we'll just have them spin up their socket
-  if(playerNum == 1 || playerNum == 0){
+  if(playerNum == 1 || playerNum == 0 || playerNum == 3){
     return 0;
   }
 
@@ -215,7 +224,7 @@ start_packet_t* receive_start(int fd) {
   received_info->numUsers = numUsers;
 
   // Now see if we're player 1 or if we need to keep trying to read this message
-  if (playerNum == 1 || playerNum == 0) {
+  if (playerNum == 1 || playerNum == 0 || playerNum == 3) {
     received_info->hostname = NULL;
     received_info->port = 0;
     return received_info;
@@ -518,4 +527,55 @@ int receive_and_update_password_match(int fd, password_set_node* passwordList){
   memcpy(passwordList[index].solved_password, solvedPassword, PASSWORD_LENGTH);
 
   return updated;
+}
+
+int send_end(int fd, int winner){
+  if (write(fd, &winner, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+  return 0;
+}
+
+int receive_end(int fd){
+  int winner;
+  if (read(fd, &winner, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return -1;
+  }
+  return winner;
+}
+
+/**
+ * 0 - password
+ * 1 - end
+*/
+int multi_send_password_and_end(int fd, int type, int index, char* password, int winner){
+  if (write(fd, &type, sizeof(int)) != sizeof(int)) {
+    // Writing failed, so return an error
+    return -1;
+  }
+  
+  if(type == 0){
+    return send_password_match(fd, index, password);
+  }
+  else if(type == 1){
+    return send_end(fd, winner);
+  }
+  return -1;
+}
+
+
+int multi_recieve_password_and_end(int fd, password_set_node* passwordList, int* type){
+  if (read(fd, type, sizeof(int)) != sizeof(int)) {
+    // Reading failed. Return an error
+    return -1;
+  }
+  if(*type == 0){
+    return receive_and_update_password_match(fd, passwordList);
+  }
+  else if(*type == 1){
+    return receive_end(fd);
+  }
+  return -1;
 }

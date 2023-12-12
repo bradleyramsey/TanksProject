@@ -18,7 +18,16 @@ typedef struct password_set_node {
   char solved_password[PASSWORD_LENGTH];
 } password_set_node_t;
 
+typedef struct{
+    password_set_node_t* argsPasswords;
+    size_t numPasswords;
+    int index;
+    int numUsers;
+    int host_fd;
+} list_cracker_args_t;
 
-void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd);
+
+void* crack_password_list(void* tempArgs);
+// void crack_password_list(password_set_node_t* argsPasswords, size_t numPasswordsArg, int index, int numUsers, int host_fd);
 
 #endif
