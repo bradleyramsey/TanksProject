@@ -44,10 +44,6 @@ int updated_tank_dir_p2 = DIR_NORTH;
 int tank_face_p2 = DIR_NORTH;
 int weapon_dir_p2 = DIR_NORTH;
 
-
-// Apple parameters
-int apple_age = 120;
-
 // Is the game running?
 bool running = true;
 
@@ -574,12 +570,14 @@ void update_tank()
         }
       }
     }
+
+    // Place a bullet on the board
     if (fire_weapon)
     {
       if (weapon_dir == DIR_NORTH)
       {
         board[tank_center_row - 3][tank_center_col] = (-1 * player_num);
-        fire_weapon = false;
+        fire_weapon = false; 
       }
       else if (weapon_dir == DIR_EAST)
       {
@@ -627,6 +625,7 @@ void update_tank()
       updated_tank_dir_p2 = -1;
     }
 
+    // Loop back through and reset any bullets that were subtracted twice
     for (int r = 0; r < BOARD_HEIGHT; r++){
       for (int c = 0; c < BOARD_WIDTH; c++){
         if (board[r][c] == -3){
@@ -637,7 +636,7 @@ void update_tank()
         }
       }
     }
-    send_screen(partner_fd, 1, board, tank_dir);
+    send_screen(partner_fd, 1, board, tank_dir); // send screen to other player
     // Update the worm movement speed to deal with rectangular cursors
     if (tank_dir == DIR_NORTH || tank_dir == DIR_SOUTH)
     {
@@ -653,10 +652,10 @@ void update_tank()
 // Entry point: Set up the game, create jobs, then run the scheduler
 void * tankMain(void * temp_args)
 {
-  WINDOW *mainwin;
+  WINDOW *mainwin; // window for ncurses
   tank_main_args_t* args;
   int games;
-  if(temp_args != NULL){
+  if(temp_args != NULL){ // initialize player arguments
     args = (tank_main_args_t*) temp_args;
     player_num = args->player_num;
     partner_fd = args->partner_fd;
@@ -670,18 +669,19 @@ void * tankMain(void * temp_args)
     return NULL;
   }
 
+  // reset these values in case user plays multiple games
   running = true;
   p1_winner = false;
   
-  // Initialize the ncurses window
+  // check if this is the first game
   if (games == 0){
     mainwin = initscr();
   }
   else{
-    // refresh();
-    // mainwin = initscr();
     wrefresh(mainwin);
   }
+
+  // Did ncurses window initialize correctly?
   if (mainwin == NULL)
   {
     fprintf(stderr, "Error initializing ncurses.\n");
@@ -702,7 +702,7 @@ void * tankMain(void * temp_args)
     // Zero out the board contents
     memset(board, 0, BOARD_WIDTH * BOARD_HEIGHT * sizeof(int));
 
-    // Put tank for player 1 in the bottom right of the board
+    // Put tank for player 1 in the top left of the board
     board[0][1] = 1;
     board[0][2] = 1;
     board[0][3] = 1;
@@ -747,10 +747,6 @@ void * tankMain(void * temp_args)
   task_wait(draw_board_task);
   task_wait(read_input_task);
 
-  // Don't wait for the generate_apple task because it sleeps for 2 seconds,
-  // which creates a noticeable delay when exiting.
-  // task_wait(generate_apple_task);
-
   // Display the end of game message and wait for user input
   if (p1_winner){
     send_screen(partner_fd, 2, board, tank_dir_p2);
@@ -776,7 +772,6 @@ void * tankMain(void * temp_args)
   }
   args->gameState = mainwin;
   // Clean up window
-  //delwin(mainwin);
   endwin();
 
   return 0;
