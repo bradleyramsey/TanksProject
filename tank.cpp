@@ -75,6 +75,7 @@ int screen_col(int col)
 
 /**
  * Initialize the board display by printing the title and edges
+ * The initial display and board set up comes from Charlie Curtsinger's worm lab
  */
 void init_display()
 {
@@ -216,6 +217,10 @@ void draw_tank(int board[][BOARD_WIDTH], int *player_num, int r, int c, int tank
 
 /**
  * Move the tank right one space on the board
+ * Paramters: int board[][]: 2d-array storing board values
+ *            int tank_center_row: The row where the rank is centered
+ *            int tank_center_col: The column where the tank is centered
+ * Output: None, the board is updated to have the new tank position
  */
 void tank_right(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
@@ -237,6 +242,10 @@ void tank_right(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_c
 }
 /**
  * Move the tank left one space on the board
+* Paramters: int board[][]: 2d-array storing board values
+ *            int tank_center_row: The row where the rank is centered
+ *            int tank_center_col: The column where the tank is centered
+ * Output: None, the board is updated to have the new tank position
  */
 void tank_left(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
@@ -260,6 +269,10 @@ void tank_left(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_co
 
 /**
  * Move the tank up one space on the board
+ * Paramters: int board[][]: 2d-array storing board values
+ *            int tank_center_row: The row where the rank is centered
+ *            int tank_center_col: The column where the tank is centered
+ * Output: None, the board is updated to have the new tank position
  */
 void tank_up(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
@@ -283,6 +296,10 @@ void tank_up(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 
 /**
  * Move the tank down one space on the board
+ * Paramters: int board[][]: 2d-array storing board values
+ *            int tank_center_row: The row where the rank is centered
+ *            int tank_center_col: The column where the tank is centered
+ * Output: None, the board is updated to have the new tank position
  */
 void tank_down(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
@@ -307,6 +324,10 @@ void tank_down(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_co
 /**
  * Checks if the passed coordiante corresponds to a bullet or mine on the board
  * If it does, end the game
+ * Paramters: int board[][]: 2d-array storing board values
+ *            int row: The corresponding row on the board
+ *            int col: The corresponding column on the board
+ * Output: None, the game is ended if a given board space that has a tank collides with a bullet
  */
 void check_kill(int board[][BOARD_WIDTH], int row, int col)
 {
@@ -325,6 +346,10 @@ void check_kill(int board[][BOARD_WIDTH], int row, int col)
 
 /**
  * Move the bullets on the board one space in the direction the tank is facing
+ * Paramters: int board[][]: 2d-array storing board values
+ *            int row: The row where a bullet is located
+ *            int col: The column where a bullet is located
+ * Output: None, the board is updated to have the new bullet position
  */
 void move_weapon(int board[][BOARD_WIDTH], int row, int col)
 {
@@ -452,7 +477,7 @@ void read_input()
       running = false;
       fprintf(stderr, "ERROR READING INPUT\n");
     }
-    // Handle the key press and update player direction
+    // Handle the key press and update player direction and weapon firing
     if (key == KEY_UP)
     {
       if (player_num == 1){ // Is this Player 1?
@@ -497,15 +522,15 @@ void read_input()
         tank_face_p2 = DIR_WEST;
       }
     }
-    else if (key == ' ')
+    else if (key == ' ') 
     {
-      if (player_num == 1){
-        fire_weapon = true;
-        weapon_dir_p1 = tank_face_p1;
+      if (player_num == 1){ // If player 1
+        fire_weapon = true; // Fire bullet
+        weapon_dir_p1 = tank_face_p1; // update weapon direction
       }
-      else{
-        fire_weapon = true;
-        weapon_dir_p2 = tank_face_p2;
+      else{ 
+        fire_weapon = true; // Fire bullet
+        weapon_dir_p2 = tank_face_p2; // update weapon direction
       }
     }
     else if (key == 'q')
@@ -532,12 +557,14 @@ void update_tank()
       p1_winner = (status == 2); // We're ignoring that -1 is also an option here.
     }
     if (player_num == 1){
+      // Update Player 1 values
       tank_dir = updated_tank_dir_p1;
       tank_dir_p1 = updated_tank_dir_p1;
       tank_dir_p2 = opponent_dir;
       weapon_dir = weapon_dir_p1;
     }
     else{
+      // Update Player 2 values
       tank_dir = updated_tank_dir_p2;
       tank_dir_p2 = updated_tank_dir_p2;
       tank_dir_p1 = opponent_dir;
@@ -554,13 +581,13 @@ void update_tank()
         if (board[r][c] == (-1 * player_num) ){  // is board coordinate a bullet?                          
           move_weapon(board, r, c); // move bullet
         }
-        else if (board[r][c] == -3){
+        else if (board[r][c] == -3){ // check for bullets being updated twice
           board[r][c] = -1;
         }
-        else if (board[r][c] == -4){
+        else if (board[r][c] == -4){ // check for bullets being updated twice
           board[r][c] = -2;
         }
-        if (board[r][c] == player_num)
+        if (board[r][c] == player_num) // is coordinate a tank?
         {
           count++;
         }
@@ -577,25 +604,25 @@ void update_tank()
       if (weapon_dir == DIR_NORTH)
       {
         board[tank_center_row - 3][tank_center_col] = (-1 * player_num);
-        fire_weapon = false; 
+        fire_weapon = false; // Only fire one bullet per key press
       }
       else if (weapon_dir == DIR_EAST)
       {
-        if (tank_center_col + 3 < BOARD_WIDTH){
+        if (tank_center_col + 3 < BOARD_WIDTH){ // Check border boundaries
           board[tank_center_row][tank_center_col + 3] = (-1 * player_num);
-          fire_weapon = false;
+          fire_weapon = false; // Only fire one bullet per key press
         }
       }
       else if (weapon_dir == DIR_SOUTH)
       {
         board[tank_center_row + 3][tank_center_col] = (-1 * player_num);
-        fire_weapon = false;
+        fire_weapon = false; // Only fire one bullet per key press
       }
       else if (weapon_dir == DIR_WEST)
       {
-        if (tank_center_col - 3 > 0){
+        if (tank_center_col - 3 > 0){ // Check border boundaries
           board[tank_center_row][tank_center_col - 3] = (-1 * player_num);
-          fire_weapon = false;
+          fire_weapon = false; // Only fire one bullet per key press
         }
       }
     }
