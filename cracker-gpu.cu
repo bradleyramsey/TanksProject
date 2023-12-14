@@ -16,22 +16,22 @@
 #include "util.h"
 
 
-// How many characters do we have to search through
+/* The code is set up to work on any arbitrary array of characters. You just need to replace '0' with the 
+  lowest ASCII-valued character. This is because the alphabet acts as an offset. The values are hardcoded 
+  instead of using a universal variable to save time, but it could also be DEFINEd, I just figured it was
+  working and wouldn't be too hard to do a quick find and replace to change if need be. Double check that
+  the alphabet is in ascending ASCII order. */
 
+    //Different examples of alphabet arrays
 
-//TODO: maybe have an array of all the characters in the alphabet?
-// __device__ alphabet[] = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-//                          'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-//                          '0','1','2','3','4','5','6','7','8','9'}
-
-// __device__ alphabet[] = {'a'-'0','b'-'0','c'-'0','d'-'0','e'-'0','f'-'0','g'-'0','h'-'0','i'-'0','j'-'0','k'-'0','l'-'0','m'-'0','n'-'0','o'-'0','p'-'0','q'-'0','r'-'0','s'-'0','t'-'0','u'-'0','v'-'0','w'-'0','x'-'0','y'-'0','z'-'0',
+// __device__ int alphabet[] = {'0'-'0','1'-'0','2'-'0','3'-'0','4'-'0','5'-'0','6'-'0','7'-'0','8'-'0','9'-'0'}
 //                          '0'-'0','B'-'0','C'-'0','D'-'0','E'-'0','F'-'0','G'-'0','H'-'0','I'-'0','J'-'0','K'-'0','L'-'0','M'-'0','N'-'0','O'-'0','P'-'0','Q'-'0','R'-'0','S'-'0','T'-'0','U'-'0','V'-'0','W'-'0','X'-'0','Y'-'0','Z'-'0',
-//                          '0'-'0','1'-'0','2'-'0','3'-'0','4'-'0','5'-'0','6'-'0','7'-'0','8'-'0','9'-'0'}
+//                          'a'-'0','b'-'0','c'-'0','d'-'0','e'-'0','f'-'0','g'-'0','h'-'0','i'-'0','j'-'0','k'-'0','l'-'0','m'-'0','n'-'0','o'-'0','p'-'0','q'-'0','r'-'0','s'-'0','t'-'0','u'-'0','v'-'0','w'-'0','x'-'0','y'-'0','z'-'0',
 
 __device__ int alphabet[] = {'0'-'0','1'-'0','2'-'0','3'-'0','4'-'0','5'-'0','6'-'0','7'-'0','8'-'0','9'-'0',
                               'a'-'0','b'-'0','c'-'0','d'-'0','e'-'0','f'-'0','g'-'0','h'-'0','i'-'0','j'-'0','k'-'0','l'-'0','m'-'0','n'-'0','o'-'0','p'-'0','q'-'0','r'-'0','s'-'0','t'-'0','u'-'0','v'-'0','w'-'0','x'-'0','y'-'0','z'-'0'};
 
-// Each board will be a block
+
 #define THREADS_PER_BLOCK (ALPHABET_SIZE)
 #define PASSWORDS_PER_THREAD (ALPHABET_SIZE * ALPHABET_SIZE)
 #define PASSWORDS_PER_BLOCK (PASSWORDS_PER_THREAD * THREADS_PER_BLOCK)
@@ -42,7 +42,11 @@ __device__ int alphabet[] = {'0'-'0','1'-'0','2'-'0','3'-'0','4'-'0','5'-'0','6'
 #define FALSE 0
 
 /************************* MD5 *************************/
-// Look into: https://github.com/VladX/md5-bruteforcer/blob/master/gpu.cu
+// I didn't have enough time, but if revisited, look into: https://github.com/VladX/md5-bruteforcer/blob/master/gpu.cu
+
+
+// I didn't write the MD5 code myself. Here's the attribution. It would have been insanely time consuming to do it
+// so I really appreciate this open-souce implemention which let me focus on the more interesting parts of the project
 /*
  * Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm
  * and modified slightly to be functionally identical but condensed into control structures.
@@ -293,10 +297,7 @@ void usrnmcpy(char * from, char * to){
 
 
 
-/********************* Parts B & C ************************/
-
-
-
+/********************* Ok, back to our code ************************/
 __constant__ int numPasswordsGPU;
 __constant__ int numUsersGPU;
 __constant__ int offsetGPU;
@@ -307,58 +308,48 @@ int numPasswords;
 
 // This is the fuction that runs on each thread
 __global__ void cracker_thread(password_set_node_t* passwords){
-  // printf("test");
-  // And declare local
   uint8_t candidate_hash[MD5_DIGEST_LENGTH]; //< This will hold the hash of the candidate password
 
   // Same as the individual thread, but now we have each start on offset, and inc by the # of threads
   char candidate_passwd[] = "0000000";
   candidate_passwd[0]+= alphabet[offsetGPU];
   candidate_passwd[2]+= alphabet[threadIdx.x];
-  // candidate_passwd[3]+= alphabet[threadIdx.y];
-  // candidate_passwd[4]+= alphabet[blockIdx.x % ALPHABET_SIZE];
-  // candidate_passwd[5]+= alphabet[(blockIdx.x / ALPHABET_SIZE) % ALPHABET_SIZE];
-  // candidate_passwd[6]+= alphabet[((blockIdx.x / ALPHABET_SIZE) / ALPHABET_SIZE) % ALPHABET_SIZE];
-  // 
   candidate_passwd[3]+= alphabet[blockIdx.x % ALPHABET_SIZE];
   candidate_passwd[4]+= alphabet[(blockIdx.x / ALPHABET_SIZE) % ALPHABET_SIZE];
   candidate_passwd[5]+= alphabet[((blockIdx.x / ALPHABET_SIZE) / ALPHABET_SIZE) % ALPHABET_SIZE];
   candidate_passwd[6]+= alphabet[(((blockIdx.x / ALPHABET_SIZE) / ALPHABET_SIZE) / ALPHABET_SIZE) % ALPHABET_SIZE];
 
-  // MD5((unsigned char*)candidate_passwd, PASSWORD_LENGTH, candidate_hash); //< Do the hash (this is the slowest part of this implementation)
   int hash_index;
 
+  // Loop for the second character
   for(int i = 1; i <= ALPHABET_SIZE; i++){
-    while(candidate_passwd[0] < '0' + alphabet[ALPHABET_SIZE - 1]){
+    while(candidate_passwd[0] < '0' + alphabet[ALPHABET_SIZE - 1]){ // Loop for the first character - will be less than alphabet size if there's more than one computer connected
       md5String(candidate_passwd, PASSWORD_LENGTH, candidate_hash);
 
       // Get the bucket corresponding to the hash
       hash_index = (candidate_hash[0] & numBucketsAndMask);
 
       // Now check if the hash of the candidate password matches any of the hashs in the bucket, 
-      // going along till we get to an empty one. Since they needed to be all sent together, an array was best
+      // going along till we get to an empty one. Since they needed to be all sent together, an 
+      // array was best. The goal is that this while statement usually fails the first time
       while(passwords[hash_index].hashed_password[0] != 0){
         if(hashcmp(candidate_hash, passwords[hash_index].hashed_password)){
-          // cudaMemcpy(&(passwords[i].solved_password), candidate_passwd, sizeof(char) * PASSWORD_LENGTH, cudaMemcpyDeviceToDevice);
-          pwdcpy(candidate_passwd, passwords[hash_index].solved_password);
-          // printf("%s", candidate_passwd);
+          pwdcpy(candidate_passwd, passwords[hash_index].solved_password); // If we match, copy it over
           break;
         }
-        hash_index = (hash_index + 1) % (numBucketsAndMask + 1);
-    }
-      // while(int i = 0; i < numPasswordsGPU; i++){
-      //   // if(memcmp(candidate_hash, &(passwords[i].hashed_password), MD5_DIGEST_LENGTH) == 0) {
-        
-      // }
+        hash_index = (hash_index + 1) % (numBucketsAndMask + 1); // If there was something in the bucket
+                          // that didn't match, we have to go to the next one, but make sure to roll over
+      }
+      // Inc the last charcter. We'll use the number of users so that none of the computers check the same
+      // passwords without having to coordinate across machines beyond the inital offset
       candidate_passwd[0] += numUsersGPU;
     }
+    // Reset the first character for the next loop, and set the second charater to the next one in alphabet
     candidate_passwd[0] = '0' + alphabet[offsetGPU];
     candidate_passwd[1] = '0' + alphabet[i];
-    // candidate_passwd[0] = 'a' + offsetGPU;
-    // candidate_passwd[1]++;
   }
-  // Potential TO DO: Add check somewhere if we've cracked all passwords? This would be tough among all 
-  //                  the different computers and threads.
+  // Really hard but potential future TODO: Add check somewhere if we've cracked all passwords? 
+  //  This would be super tough among all the different computers and threads.
 }
 
 /**
@@ -377,7 +368,7 @@ void* crack_password_list(void* tempArgs) {
   int numUsers = args->numUsers;
   int host_fd = args->host_fd;
 
-
+  // Copy some preliminary constants we need to run MD5 on the GPU
   if (cudaMemcpyToSymbol(K, cpuK, sizeof(uint32_t) * 64, 0, cudaMemcpyHostToDevice) !=
       cudaSuccess) {
     fprintf(stderr, "Failed to copy K to the GPU\n");
@@ -388,6 +379,7 @@ void* crack_password_list(void* tempArgs) {
     fprintf(stderr, "Failed to copy S to the GPU\n");
   }
 
+  // Now copy some specific parameters we need to crack in parallel
   if (cudaMemcpyToSymbol(numUsersGPU, &numUsers, sizeof(int), 0, cudaMemcpyHostToDevice) !=
       cudaSuccess) {
     fprintf(stderr, "Failed to copy numUsers to the GPU\n");
@@ -403,7 +395,7 @@ void* crack_password_list(void* tempArgs) {
     fprintf(stderr, "Failed to copy PADDING to the GPU\n");
   }
 
-  // Just do array for now will need to change to accomodate HASH
+  // Now, send over the password Hash Map (in array-style)
   password_set_node_t* GPUpasswords;
 
   // Allocate space for the boards on the GPU
@@ -419,9 +411,11 @@ void* crack_password_list(void* tempArgs) {
   }
 
   
-  // dim3 layout(ALPHABET_SIZE, ALPHABET_SIZE, ALPHABET_SIZE);
+  // Calculate the number of blocks we need to cover the search space, and run the solver
   size_t blocks = (SEARCH_SPACE_SIZE + PASSWORDS_PER_BLOCK - 1) / PASSWORDS_PER_BLOCK;
   cracker_thread<<<blocks, dim3(ALPHABET_SIZE)>>>(GPUpasswords); // Actually run the solver on each thread
+              // Note: this is definitely not an optimal allocation of threads and blocks, but 36x36 was too many threads per block
+              // the code could be made more efficient with a different manner of dividing the search space 
 
   // Wait for all the threads to finish
   if (cudaDeviceSynchronize() != cudaSuccess) {
@@ -439,6 +433,7 @@ void* crack_password_list(void* tempArgs) {
   cudaFree(S);
   cudaFree(PADDING);
 
+  // Now go through the buckets and send back any solved passwords
   for(int i = 0; i < (numBucketsAndMask + 1); i++){
     if(argsPasswords[i].solved_password[0] != 0){ 
       // printf("%s %.*s\n", argsPasswords[i].username, PASSWORD_LENGTH, argsPasswords[i].solved_password);

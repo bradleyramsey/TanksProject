@@ -1,3 +1,17 @@
+/**
+ * Written by Brian Goodell and Bradley Ramsey
+ * 
+ * This was created as a final project for Grinnell College's Operating Systems class (CS-213)
+ * 
+ * It's a unexpectly fun multiplayer game while also being a really cool application of distributed computation.
+ * That being said, it's a mess of networking and parallelism.
+ * 
+ * Enjoy
+*/
+
+
+
+
 #include "main.h"
 #include <stdio.h>
 #include <stdint.h>
