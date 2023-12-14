@@ -19,16 +19,12 @@
 #define DIR_SOUTH 2
 #define DIR_WEST 3
 
-// Game parameters
-#define PLAYER_1 1
-#define PLAYER_2 2
-
-
 /**
- * In-memory representation of the game board
+ * In-memory representation of the game board:
  * Zero represents an empty cell
- * Positive numbers represent worm cells (which count up at each time step until they reach
- * worm_length) Negative numbers represent apple cells (which count up at each time step)
+ * Positive numbers represent tanks (1's represent player 1, 2's represent player 2)
+ * Negative numbers represent bullets (-1 and -3 represent player 1 bullets,
+ * -2 and -4 represent player 2 bullets)
  */
 int board[BOARD_HEIGHT][BOARD_WIDTH];
 int player_num = 1;
@@ -54,8 +50,13 @@ int apple_age = 120;
 
 // Is the game running?
 bool running = true;
+
+// Did the player fire there weapon (Press Spacebar)?
 bool fire_weapon = false;
+
+// Did Player 1 win?
 bool p1_winner = false;
+
 /**
  * Convert a board row number to a screen position
  * \param   row   The board row number to convert
@@ -114,7 +115,7 @@ void init_display()
 }
 
 /**
- * Show a game over message and that Player 1 won, and wait for a key press.
+ * Show a game over message and that "Your" player won, and wait for a key press.
  */
 void end_game()
 {
@@ -129,7 +130,7 @@ void end_game()
 }
 
 /**
- * Show a game over message and that Player 2 won and wait for a key press.
+ * Show a game over message and that the other player won and wait for a key press.
  */
 void end_game_p2()
 {
@@ -142,18 +143,27 @@ void end_game_p2()
   task_readchar();
 }
 
+/*
+* Draw the tank on the board
+* Paramters: int board[][]: 2d-array storing board values
+             int *player_num: stores the how many tank spaces have been updated
+             int r: The row where the rank is centered
+             int c: The column where the tank is centered
+             int tank_dir: The direction the tank faces
+  Output: None, the board is updated to have the new tank position
+*/
 void draw_tank(int board[][BOARD_WIDTH], int *player_num, int r, int c, int tank_dir)
 {
-  if (tank_dir == DIR_NORTH){
-    if (*player_num == 0){
+  if (tank_dir == DIR_NORTH){ // Is the tank facing north?
+    if (*player_num == 0){ // Is this the first tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '/');
       (*player_num)++;
     }
-    else if (*player_num == 1){
+    else if (*player_num == 1){ // Is this the second tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '|');
       (*player_num)++;
     }
-    else if (*player_num == 2){
+    else if (*player_num == 2){ // Is this the third tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '\\');
       (*player_num)++;
     }
@@ -161,14 +171,14 @@ void draw_tank(int board[][BOARD_WIDTH], int *player_num, int r, int c, int tank
       mvaddch(screen_row(r), screen_col(c), 'O');
     }
   }
-  if (tank_dir == DIR_WEST){
-    if (*player_num == 0){
+  if (tank_dir == DIR_WEST){ // Is the tank facing west?
+    if (*player_num == 0){ // Is this the first tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '/');
     }
-    else if (*player_num == 3){
+    else if (*player_num == 3){ // Is this the fourth tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '-');
     }
-    else if (*player_num == 6){
+    else if (*player_num == 6){ // Is this the seventh tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '\\');
     }
     else{
@@ -176,14 +186,14 @@ void draw_tank(int board[][BOARD_WIDTH], int *player_num, int r, int c, int tank
     }
     (*player_num)++;
   }
-  if (tank_dir == DIR_EAST){
-    if (*player_num == 2){
+  if (tank_dir == DIR_EAST){ // Is the tank facing east?
+    if (*player_num == 2){ // Is this the third tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '\\');
     }
-    else if (*player_num == 5){
+    else if (*player_num == 5){ // Is this the sixth tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '-');
     }
-    else if (*player_num == 8){
+    else if (*player_num == 8){ // Is this the ninth tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '/');
     }
     else{
@@ -191,14 +201,14 @@ void draw_tank(int board[][BOARD_WIDTH], int *player_num, int r, int c, int tank
     }
     (*player_num)++;
   }
-  if (tank_dir == DIR_SOUTH){
-    if (*player_num == 6){
+  if (tank_dir == DIR_SOUTH){ // Is the tank facing south?
+    if (*player_num == 6){// Is this the seventh tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '\\');
     }
-    else if (*player_num == 7){
+    else if (*player_num == 7){ // Is this the eigth tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '|');
     }
-    else if (*player_num == 8){
+    else if (*player_num == 8){ // Is this the ninth tank piece to draw
       mvaddch(screen_row(r), screen_col(c), '/');
     }
     else{
@@ -213,8 +223,9 @@ void draw_tank(int board[][BOARD_WIDTH], int *player_num, int r, int c, int tank
  */
 void tank_right(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
-  if (tank_center_col + 2 < BOARD_WIDTH)
+  if (tank_center_col + 2 < BOARD_WIDTH) // Check boundaries
   {
+    // Check to ensure you don't overwrite other tank
     if (board[tank_center_row][tank_center_col +2] < 1 &&
         board[tank_center_row + 1][tank_center_col + 2] < 1 && 
         board[tank_center_row - 1][tank_center_col + 2] < 1)
@@ -233,8 +244,10 @@ void tank_right(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_c
  */
 void tank_left(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
+  // Check boundaries
   if (tank_center_col - 2 > 0)
   {
+    // Check to ensure you don't overwrite other tank
     if (board[tank_center_row][tank_center_col -2] < 1 &&
         board[tank_center_row + 1][tank_center_col - 2] < 1 &&
         board[tank_center_row - 1][tank_center_col - 2] < 1)
@@ -254,8 +267,10 @@ void tank_left(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_co
  */
 void tank_up(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
+  // Check boundaries
   if (tank_center_row - 2 >= 0)
   {
+    // Check to ensure you don't overwrite other tank
     if (board[tank_center_row - 2][tank_center_col] < 1 &&
         board[tank_center_row - 2][tank_center_col + 1] < 1 && 
         board[tank_center_row - 2][tank_center_col-1] < 1)
@@ -275,8 +290,10 @@ void tank_up(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
  */
 void tank_down(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_col)
 {
+  // Check boundaries
   if (tank_center_row + 2 < BOARD_HEIGHT)
   {
+    // Check to ensure you don't overwrite other tank
     if (board[tank_center_row + 2][tank_center_col] < 1 &&
         board[tank_center_row + 2][tank_center_col + 1] < 1 &&
         board[tank_center_row + 2][tank_center_col-1] < 1)
@@ -297,15 +314,15 @@ void tank_down(int board[][BOARD_WIDTH], int tank_center_row, int tank_center_co
  */
 void check_kill(int board[][BOARD_WIDTH], int row, int col)
 {
-  if (board[row][col] == 1)
+  if (board[row][col] == 1) // Did player 1 collide with a bullet?
   {
-    running = false;
+    running = false; // end game
     ungetch(0);
   }
-  else if (board[row][col] == 2)
+  else if (board[row][col] == 2) // Did player 2 collide with a bullet?
   {
     p1_winner = true;
-    running = false;
+    running = false; // end game
     ungetch(0);
   }
 }
@@ -316,7 +333,7 @@ void check_kill(int board[][BOARD_WIDTH], int row, int col)
 void move_weapon(int board[][BOARD_WIDTH], int row, int col)
 {
   int weapon_dir = DIR_NORTH;
-  if (player_num == 1){
+  if (player_num == 1){ // Is this player 1?
     weapon_dir = weapon_dir_p1;
   }
   else{
@@ -324,10 +341,10 @@ void move_weapon(int board[][BOARD_WIDTH], int row, int col)
   }
   if (weapon_dir == DIR_NORTH)
   {
-    if (row - 1 >= 0)
+    if (row - 1 >= 0) // Check board boundaries
     {
       check_kill(board, row - 1, col); // Has bullet collided with a tank?
-      board[row - 1][col] = (-1 * player_num)-2;
+      board[row - 1][col] = (-1 * player_num)-2; // update bullet on board
       board[row][col] = 0;
     }
     else
@@ -337,10 +354,10 @@ void move_weapon(int board[][BOARD_WIDTH], int row, int col)
   }
   else if (weapon_dir == DIR_EAST)
   {
-    if (col + 1 < BOARD_WIDTH)
+    if (col + 1 < BOARD_WIDTH) // Check board boundaries
     {
       check_kill(board, row, col + 1); // Has bullet collided with a tank?
-      board[row][col + 1] = (-1 * player_num)-2;
+      board[row][col + 1] = (-1 * player_num)-2; // update bullet on board
       board[row][col] = 0;
     }
     else
@@ -350,10 +367,10 @@ void move_weapon(int board[][BOARD_WIDTH], int row, int col)
   }
   else if (weapon_dir == DIR_SOUTH)
   {
-    if (row + 1 < BOARD_HEIGHT)
+    if (row + 1 < BOARD_HEIGHT) // Check board boundaries
     {
       check_kill(board, row + 1, col); // Has bullet collided with a tank?
-      board[row + 1][col] = (-1 * player_num)-2;
+      board[row + 1][col] = (-1 * player_num)-2; // update bullet on board
       board[row][col] = 0;
     }
     else
@@ -363,10 +380,10 @@ void move_weapon(int board[][BOARD_WIDTH], int row, int col)
   }
   else if (weapon_dir == DIR_WEST)
   {
-    if (col - 1 > 0)
+    if (col - 1 > 0)// Check board boundaries
     {
       check_kill(board, row, col - 1); // Has bullet collided with a tank?
-      board[row][col - 1] = (-1 * player_num)-2;
+      board[row][col - 1] = (-1 * player_num)-2; // update bullet on board
       board[row][col] = 0;
     }
     else
@@ -393,11 +410,11 @@ void draw_board()
         { // Draw blank spaces
           mvaddch(screen_row(r), screen_col(c), ' ');
         }
-        else if (board[r][c] == PLAYER_1) 
+        else if (board[r][c] == 1) 
         { 
           draw_tank(board, &draw_p1, r, c, tank_dir_p1); // Draw tank
         }
-        else if (board[r][c] == PLAYER_2) 
+        else if (board[r][c] == 2) 
         { 
           draw_tank(board, &draw_p2, r, c, tank_dir_p2); // Draw tank
         }
@@ -439,10 +456,10 @@ void read_input()
       running = false;
       fprintf(stderr, "ERROR READING INPUT\n");
     }
-    // Handle the key press
+    // Handle the key press and update player direction
     if (key == KEY_UP)
     {
-      if (player_num == 1){
+      if (player_num == 1){ // Is this Player 1?
         updated_tank_dir_p1 = DIR_NORTH;
         tank_face_p1 = DIR_NORTH;
       }
