@@ -412,7 +412,7 @@ void draw_board()
     draw_p1 = 0;
     draw_p2 = 0;
 
-    // Draw the score
+    // Draw the score //@BRADLEY, REMOVE THIS?
     mvprintw(screen_row(-2), screen_col(BOARD_WIDTH - 9), "Score %03d\r",
              3 - INIT_WORM_LENGTH);
 
@@ -624,11 +624,11 @@ void update_tank()
     // Update the worm movement speed to deal with rectangular cursors
     if (tank_dir == DIR_NORTH || tank_dir == DIR_SOUTH)
     {
-      task_sleep(WORM_VERTICAL_INTERVAL);
+      task_sleep(VERTICAL_INTERVAL);
     }
     else
     {
-      task_sleep(WORM_HORIZONTAL_INTERVAL);
+      task_sleep(HORIZONTAL_INTERVAL);
     }
   }
 }
