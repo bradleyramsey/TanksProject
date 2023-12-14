@@ -146,7 +146,7 @@ void guestMain(char* addr){
         char password[MAX_USERNAME_LENGTH];
         
         do{
-            printf("Now choose a 7 character password: "); 
+            printf("Now choose a %d character password: ", PASSWORD_LENGTH); 
             scanf("%s", password);
             if(strlen(password) != PASSWORD_LENGTH) // Check that it's exactly the right length
                 continue;
