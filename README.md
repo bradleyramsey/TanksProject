@@ -2,7 +2,7 @@
 
 Brian Goodell and Bradley Ramsey
 
-For this project we made a simple, yet suprisingly fun multiplayer tank game, with a twist: in the background it's a distributed password cracker. 
+For this project we made a simple, yet surprisingly fun multiplayer tank game, with a twist: in the background it's a distributed password cracker. 
 
 Essentially, when you join the central hub, it asks for a username and password. It hashes the password so your plaintext version never leaves the local machine, and then add you to the game. It handles player opponent assignments, and then you connect peer-to-peer to play the actual game with reduced latency (you can also change the speed - `HORIZONAL_INTERVAL` and `VERTICAL_INTERVAL` in tank.h - to the point where there's not much noticable lag. In playtest, we just found the game was less chaotic and more strategic at slower speeds). The passwords are conglomerated by the host and sent out to each connected machine. They each crack a section of the search space and then report back on any passwords they found.
 
